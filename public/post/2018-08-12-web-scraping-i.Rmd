@@ -1,0 +1,156 @@
+---
+title: Web scraping I
+author: Martín Paladino
+date: '2018-08-12'
+slug: web-scraping-i
+categories:
+  - R
+tags:
+  - scraping
+  - nlp
+  - rvest
+isCJKLanguage: no
+editor_options: 
+  chunk_output_type: console
+---
+
+> Primera entrega. 
+
+# ¿Qué es el web scraping?
+
+Una parte sustantiva --y creciente- de la información que se produce se hace pública a través de páginas web. El [web scraping](https://es.wikipedia.org/wiki/Web_scraping) es una técnica para extraer información de estas páginas y sistematizarla, ya sea para conservarla, analizarla o ambas. Si omitimos la parte de "conservarla" el meollo del asunto está en sistematizarla y R es de gran ayuda para lograrlo. 
+
+## Automatizar un procedimiento tedioso
+
+Las páginas web están diseñadas para ser vistas por los usuarios a través de un navegador. Por ese motivo si queremos analizar la información la información no podemos utilizar las páginas web de manera directa, a menos que todo el análisis que hagamos sea utilizando a nuestro cerebro de manera exclusiva. Alternativamete podemos copiar y pegar desde el navegador a una planilla de cálculos y luego analizar la información en esa planilla. En ese caso estaríamos haciendo manualmente dos pasos importantes del web scraping, la adquisición de los datos al acceder a la página con el navegador y la sistematización de la información al seleccionar las partes que nos interesan, copiarlas y pegarlas en el lugar correcto de planilla de cálculos. 
+
+Este proceso manual tiene algunos problemas. El principal es lo tedioso del proceso, sobre todo si buscamos información de muchas páginas web. Para unas pocas páginas no hay problema, pero para 100 o 1000 nos llevaría demasiado tiempo. El segundo es que al hacerlo manualmente no podemos volver sobre nuestros pasos para verificar posibles errores. Es mucho mejor automatizar el procedimiento.
+
+¿Cómo es posible que un simple programa extraiga la información relevante? Más aún ¿Cómo puede identificar en una página qué elemento corresponde a cada cosa? Las páginas web están diseñadas para ser visualizadas por humanos a través de de un navegador, sin embargo para lograr este propósito --mostrarse de manera correcta- deben contener, además de la información propiamente dicha, metaiformación, es decir, información sobre la información. Si esta metainformación es consistente podemos utilizarla para identificar los campos de información en la página y extraerlos de manera sistemática. 
+
+Las páginas web están escritas en el lenguaje HTML. Este lenguaje de markup delimita ámbitos en la página señalando atributos: esto es un título `<h1 id="título">Título</h1>`, esto un párrafo `<p>Párrafo normal.</p>`. Normalmente no vemos esto cuando navegamos una página web, vemos el resultado que nos da el navegador después de leer y procesar el archivo html. Sin embargo podemos abrir un archivo .html con un editor de texto y ver la fuente de la página web. Ahí las cosas no se ven tan bonitas como en el browser, pero está mucho más estructuradas. Si queremos extraer el título de una página debemos seleccionar el texto que se encuentra en `<h1>` y `</h1>`. 
+
+Si esto fuera poco las páginas HTML también son documentos XML y por lo tanto están estructurados con identificadores. Otras forma de obtener todos los títulos de una página sería pedir a un lector de XML que extraiga todos los elementos con el `id="tìtulo"`. 
+
+Todavía más: para dar a las páginas web mayor atractivo visual se utiliza otro lenguaje llamado CSS. El CSS especifica las características visuales de cada elemento de una página, de que manera debe hacer el render de la página el navegador. Para el scraping la ventaja de CSS es que cada característica visual pertenece a una clase y esto nos permite extraer la información de cada clase. Si el diseñador de la página utiliza claves visuales para separar el contenido --los títulos con una tipografía más grande, las referencias en *cursiva*- podemos utilizar la indicación al elemento correspondiente de CSS para saber qué parte de la página es la que nos interesa. Dado que la mayoría de sitios utiliza CSS y que las claves visuales son fundamentales en el diseño web y ampliamente utilizadas en la mayoría de los casos seleccionaremos la información relevante utilizando este método. Es más fácil de lo que parece. 
+
+## Webscrapping en R
+
+Existen muchas herramientas para hacer web scaping. En este caso nos centramos en herramientas disponibles en R. La ventaja de usar R^[Aunque pudiera ser más limitado que otras herramientas.] es que usamos la misma herramienta para adquirir los datos y analizarlos. Es decir, el final de nuestro proceso será una estructura de datos, data.frame o lista, disponible en nuestra sesión de R. Si la estructura de datos es el final del proceso, el principio es más bien una especificación: de qué sitio extraeremos la información y qué partes de las páginas web de ese sitio son las que nos interesa recuperar y sistematizar. Este post presenta un ejemplo de como llegar del punto A al punto B, desde la información que nos interesa a un data.frame prolijo con esa información lista para el análisis. 
+
+### Herramientas 
+
+Aún dentro de R existen múltiples herramientas para hacer web scraping. En este caso utilizaremos la librería de `rvest::`, escrita y mantenida por el mismísimo Hadley Wickham. `rvest::` no hace nada que no se pueda hacer con otras herramientas, de hecho es un wrapper que facilita el uso de funciones de otros paquetes que son las que hacen el trabajo pesado. La utilizamos porque, como suele ser el caso con los paquetes desarrollados por Wickham, es fácil de usar, tiene una sintaxis sencilla tanto para escritura como para lectura y es consistente con las convenciones del `tidyverse`.
+`rvest::` tiene funciones para prácticamente todo el proceso de scraping de páginas: descargar la página web, seleccionar la información de interés y  darle un formato adecuado. Sólo hace falta agregar algo de código adicional para unir las funciones en un pequeño programa ad hoc que hace el trabajo.
+
+Otra herramienta fundamental para el web scrapping es una que esta usando ahora mismo, sólo que la usará de otro modo. El navegador web. En este caso usaremos Firefox, aunque Chrome también serviría. Los importante es que su navegador cuente con una característica llamada "Modo desarrollador" o "Desarrollador Web". Esta característica nos permite asociar visualmente el contenido que presenta el navegador --el render de la página- con el código que la produce. De este modo podemos encotrar el camino dentro de la estructura de la página de lo que como humanos identificamos como información relevante: el título de una página, el autor, etc.
+
+Con el modo desarrollador activado señalamos con el puntero del mouse un elemento y vemos, en la parte inferior, el código html relevante y el camino CSS. Siguiendo ese camino recuperamos la información. 
+
+# Ejemplo de uso: resúmenes de la revista Secuencia
+
+[Secuencia](http://secuencia.mora.edu.mx/index.php/Secuencia) es una revista publicada por el [Instituto Mora](www.mora.edu.mx), especializada en artículos de historia y ciencias sociales. La revista es de acceso libre y la página web está bien estructurada. 
+
+## Objetivos y especificación de los resultados. 
+
+El scraping de los resúmenes que llevaremos a cabo es un paso intermedio para hacer minería de texto sobre ese corpus, es decir, para preparar el material de otro post que se publicará el futuro. Ese objetivo no es menor a la hora de diseñar el scraping, ya que este interés de análisis es el que determina que información es relevante y que estructura tendrá queremos que tenga para poder analizarlo. Veamos una tabla con el resultado esperado, en este caso para uno de los artículos. Lo haremos manualmente y nos servirá de guía para programar el script que hará el trabajo pesado con la totalidad de los resúmenes. 
+
+
+
+id  numero          título                                      autores         resumen                                                 año
+--- --------------- ------------------------------------------- --------------- ------------------------------------------------------- --------  
+1   Núm. 101 (2018) La distribución de la tierra y el crecim... María Fernan... En Buenos Aires, el periodo que transcurre entre 1839 … 2018
+
+Table: Estructura esperada de los datos.
+
+> Trate de no obviar este paso. Lleva algo tiempo  especificar la estructura de datos que necesitamos al final del proceso, pero al final es más rápido y da mejores resultados hacerlo así. Además es más fácil escribir un script cuando sabemos qué queremos que haga. No es necesario hacer una tabla, pero sí tener al menos unas notas que especifiquen claramente qué campos de información queremos reunir. 
+
+## Lectrura de la página y extracción de la información
+
+¡Por fin! Sabiendo en qué pagina está la información y qué partes nos interesan podemos empezar a consultar la página. El primer paso es descargala. 
+
+```{r, librerías, message=FALSE}
+# Cargar librerías. 
+library(tidyverse)  
+library(rvest)
+library(stringr)    #Para manipulación de cadenas de caracteres.  
+```
+
+```{r, cargar-pagina}
+
+pagina_cruda <- read_html("http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1610")
+
+pagina_cruda
+``` 
+
+El resultado no parece muy informativo, sin embargo es excelente. No tenemos un error, así que la página se cargó sin problemas. Si el servidor no es estuviera disponible, el enlace fuera incorrecto o ubiera algún conflicto entre el servidor y `html_read()` no tendríamos la materia prima para seguir procesando la información. Ahora tenemos un objeto en el entorno con el nombre `pagina_cruda` del que sacar la información. Esa información está disponible en *nodos*, así que iremos extrayendo uno a uno los nodos importantes. Los identificamos usando el modo desarrollador de nuestro navegador. El primero que queremos ver es el título del artículo, que está en el nodo CSS `div#articleTitle`.
+
+
+```{r, nodos}
+
+pagina_cruda %>% 
+  html_nodes("div#articleTitle") %>%  # Extraigo el nodo
+  html_text()                         #Y el texto dentro del nodo
+```
+
+Ya tenemos al título del artículo como un objeto muy reconocible en R: una cadena de caracteres. Perfecto para la minería de texto que vendrá después. 
+
+## Definir una función para reunir toda la información
+
+Considerando que vamos a leer y sistematizar la información de muchas páginas vale la pena invertir algo de tiempo para definir una función que se encargue del trabajo. Esta función recibe como input un url y regresa como output un data.frame con la estructura definida en la Tabla. 
+Es una función simple, primero lee el html del url que le pasamos, luego va extrayendo el texto en los nodos y los reune en un `tibble`, que es básicamente un data.frame que se imprime mejor en pantalla. 
+
+```{r}
+leer_resumenes <- function (x){
+  pagina_cruda = read_html(x)
+  tibble (numero = html_nodes(pagina_cruda, "div#breadcrumb") %>% 
+            html_nodes("a") %>% 
+            html_text() %>% 
+            .[2], 
+          titulo = html_nodes(pagina_cruda, "div#articleTitle") %>% 
+            html_text(), 
+          autor = html_nodes(pagina_cruda, "#authorString") %>% 
+            html_text(), 
+          resumen = html_nodes(pagina_cruda, "div#articleAbstract") %>% 
+            html_text()
+  )      #Cierra el tibble
+}
+
+# test
+
+articulo1610 <- leer_resumenes("http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1610")
+articulo1610
+``` 
+
+La función... funciona. Recibe un url y regresa un tibble con los datos esperados para cada columna. Sin embargo todavía no están limpios: en la columna `resumen` aparecen saltos de línea (`\n`) y tabulaciones (`\t`). Esto es bastante frecuente y la solución es manipular las cadenas de caracteres para quitar los sobrantes. También se repite la palabra "Resumen". No agrega mucha información, ya sabíamos que era un resumen.
+
+```{r, limpieza}
+articulo1610 %>% 
+  mutate(resumen = str_remove_all(resumen, "\\n|\\t")) %>%  #\\ para escapar \. Esto es R.
+  mutate(resumen = str_remove_all(resumen, "^Resumen")) %>% #^ para que solo captura al inicio de línea.
+  knitr::kable(caption = "Una registro de resumen de la revista Secuencia")
+```
+
+Más allá de la relevancia del artículo que hemos recuperado lo que nos interesa es sistematizar todos los resúmenes de la revista. Como disponemos de una función que recupera y sistematiza cada resumen podemos iterar esa función sobre una lista de url y obtener una lista de data.frame, uno con cada resumen sistematizado. Luego podemos reunir esa lista de data.frame en una única estructura de datos. 
+
+En una próxima entrega veremos una forma de crear, utilizando estas mimas herramientas, una lista de enlaces. Por ahora las capturamos manualmente. 
+
+```{r, iterar}
+direcciones <- list("http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1237", 
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1338",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1439",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1540",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1641",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1742",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1843",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1944",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1045",
+                    "http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1146")
+
+resumenes <- map_df(direcciones, leer_resumenes)
+resumenes %>% 
+  mutate(resumen = str_remove_all(resumen, "\\n|\\t")) %>%  
+  mutate(resumen = str_remove_all(resumen, "^Resumen")) %>%
+  knitr::kable(caption = "10 resúmenes de la revista Secuencia")
+```
+

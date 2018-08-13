@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hant"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Code Demo - R4SC</title>
+    <base href="/">
+    <link rel="stylesheet" href="/css/normalize.min.css">
+    <link rel="stylesheet" href="/css/solarized-light.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body><header>
+    <nav class="breadcrumb">
+        
+        <a href="/">/Home</a>
+        
+        <a href="/rsociales">/Libro</a>
+        
+        <a href="/posts">/Posts</a>
+        
+    </nav>
+</header>
+<div class="container">
+<main id="single">
+    <h1>Code Demo</h1>
+    <h2><time datetime="2018-07-02T00:00:00&#43;0000">2018-07-02</time>
+</h2>
+    <section class="post-content">
+        
+
+<h2 id="bash">Bash</h2>
+
+<pre><code class="language-bash">#!/bin/bash
+
+###### CONFIG
+ACCEPTED_HOSTS=&quot;/root/.hag_accepted.conf&quot;
+BE_VERBOSE=false
+
+if [ &quot;$UID&quot; -ne 0 ]
+then
+ echo &quot;Superuser rights required&quot;
+ exit 2
+fi
+
+genApacheConf(){
+ echo -e &quot;# Host ${HOME_DIR}$1/$2 :&quot;
+}
+</code></pre>
+
+<h2 id="coffeescript">CoffeeScript</h2>
+
+<pre><code class="language-coffeescript">grade = (student, period=(if b? then 7 else 6)) -&gt;
+  if student.excellentWork
+    &quot;A+&quot;
+  else if student.okayStuff
+    if student.triedHard then &quot;B&quot; else &quot;B-&quot;
+  else
+    &quot;C&quot;
+
+class Animal extends Being
+  constructor: (@name) -&gt;
+
+  move: (meters) -&gt;
+    alert @name + &quot; moved #{meters}m.&quot;
+</code></pre>
+
+<h2 id="c">C</h2>
+
+<pre><code class="language-csharp">using System.IO.Compression;
+
+#pragma warning disable 414, 3021
+
+namespace MyApplication
+{
+    [Obsolete(&quot;...&quot;)]
+    class Program : IInterface
+    {
+        public static List&lt;int&gt; JustDoIt(int count)
+        {
+            Console.WriteLine($&quot;Hello {Name}!&quot;);
+            return new List&lt;int&gt;(new int[] { 1, 2, 3 })
+        }
+    }
+}
+</code></pre>
+
+<h2 id="java">Java</h2>
+
+<pre><code class="language-java">/**
+ * @author John Smith &lt;john.smith@example.com&gt;
+*/
+package l2f.gameserver.model;
+
+public abstract class L2Char extends L2Object {
+  public static final Short ERROR = 0x0001;
+
+  public void moveTo(int x, int y, int z) {
+    _ai = null;
+    log(&quot;Should not be called&quot;);
+    if (1 &gt; 5) { // wtf!?
+      return;
+    }
+  }
+}
+</code></pre>
+
+<h2 id="javascript">JavaScript</h2>
+
+<pre><code class="language-javascript">function $initHighlight(block, cls) {
+  try {
+    if (cls.search(/\bno\-highlight\b/) != -1)
+      return process(block, true, 0x0F) +
+             ` class=&quot;${cls}&quot;`;
+  } catch (e) {
+    /* handle exception */
+  }
+  for (var i = 0 / 2; i &lt; classes.length; i++) {
+    if (checkCondition(classes[i]) === undefined)
+      console.log('undefined');
+  }
+}
+
+export  $initHighlight;
+</code></pre>
+
+<h2 id="json">JSON</h2>
+
+<pre><code class="language-json">[
+  {
+    &quot;title&quot;: &quot;apples&quot;,
+    &quot;count&quot;: [12000, 20000],
+    &quot;description&quot;: {&quot;text&quot;: &quot;...&quot;, &quot;sensitive&quot;: false}
+  },
+  {
+    &quot;title&quot;: &quot;oranges&quot;,
+    &quot;count&quot;: [17500, null],
+    &quot;description&quot;: {&quot;text&quot;: &quot;...&quot;, &quot;sensitive&quot;: false}
+  }
+]
+</code></pre>
+
+<h2 id="php">PHP</h2>
+
+<pre><code class="language-php">require_once 'Zend/Uri/Http.php';
+
+namespace Location\Web;
+
+interface Factory
+{
+    static function _factory();
+}
+
+abstract class URI extends BaseURI implements Factory
+{
+    abstract function test();
+
+    public static $st1 = 1;
+    const ME = &quot;Yo&quot;;
+    var $list = NULL;
+    private $var;
+
+    /**
+     * Returns a URI
+     *
+     * @return URI
+     */
+    static public function _factory($stats = array(), $uri = 'http')
+    {
+        echo __METHOD__;
+        $uri = explode(':', $uri, 0b10);
+        $schemeSpecific = isset($uri[1]) ? $uri[1] : '';
+        $desc = 'Multi
+line description';
+
+        // Security check
+        if (!ctype_alnum($scheme)) {
+            throw new Zend_Uri_Exception('Illegal scheme');
+        }
+
+        $this-&gt;var = 0 - self::$st;
+        $this-&gt;list = list(Array(&quot;1&quot;=&gt; 2, 2=&gt;self::ME, 3 =&gt; \Location\Web\URI::class));
+
+        return [
+            'uri'   =&gt; $uri,
+            'value' =&gt; null,
+        ];
+    }
+}
+
+echo URI::ME . URI::$st1;
+</code></pre>
+
+    </section>
+</main>
+
+        </div><footer>
+    <span class="footer-text">Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a></span>
+</footer>
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hant"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Web scraping de revistas académicas - R4SC</title>
+    <base href="/">
+    <link rel="stylesheet" href="/css/normalize.min.css">
+    <link rel="stylesheet" href="/css/solarized-light.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body><header>
+    <nav class="breadcrumb">
+        
+        <a href="/">/Home</a>
+        
+        <a href="/post">/Blog</a>
+        
+        <a href="/rsociales">/Libro</a>
+        
+    </nav>
+</header>
+<div class="container">
+<main id="single">
+    <h1>Web scraping de revistas académicas</h1>
+    <h2><time datetime="2018-08-11T00:00:00&#43;0000">2018-08-11</time>
+</h2>
+    <section class="post-content">
+        <div id="que-es-el-web-scraping" class="section level1">
+<h1>¿Qué es el web scraping?</h1>
+<p>Una parte sustantiva –y creciente- de la información que se produce se hace pública a través de páginas web. El <a href="https://es.wikipedia.org/wiki/Web_scraping">web scraping</a> es una técnica para extraer información de estas páginas y sistematizarla, ya sea para conservarla, analizarla o ambas. Si omitimos la parte de “conservarla” el meollo del asunto está en sistematizarla y R es de gran ayuda para lograrlo.</p>
+<div id="automatizar-un-procedimiento-tedioso" class="section level2">
+<h2>Automatizar un procedimiento tedioso</h2>
+<p>Las páginas web están diseñadas para ser vistas por los usuarios a través de un navegador. Por ese motivo si queremos analizar la información la información no podemos utilizar las páginas web de manera directa, a menos que todo el análisis que hagamos sea utilizando a nuestro cerebro de manera exclusiva. Alternativamete podemos copiar y pegar desde el navegador a una planilla de cálculos y luego analizar la información en esa planilla. En ese caso estaríamos haciendo manualmente dos pasos importantes del web scraping, la adquisición de los datos al acceder a la página con el navegador y la sistematización de la información al seleccionar las partes que nos interesan, copiarlas y pegarlas en el lugar correcto de planilla de cálculos.</p>
+<p>Este proceso manual tiene algunos problemas. El principal es lo tedioso del proceso, sobre todo si buscamos información de muchas páginas web. Para unas pocas páginas no hay problema, pero para 100 o 1000 nos llevaría demasiado tiempo. El segundo es que al hacerlo manualmente no podemos volver sobre nuestros pasos para verificar posibles errores. Es mucho mejor automatizar el procedimiento.</p>
+<p>¿Cómo es posible que un simple programa extraiga la información relevante? Más aún ¿Cómo puede identificar en una página qué elemento corresponde a cada cosa? Las páginas web están diseñadas para ser visualizadas por humanos a través de de un navegador, sin embargo para lograr este propósito –mostrarse de manera correcta- deben contener, además de la información propiamente dicha, metaiformación, es decir, información sobre la información. Si esta metainformación es consistente podemos utilizarla para identificar los campos de información en la página y extraerlos de manera sistemática.</p>
+<p>Las páginas web están escritas en el lenguaje HTML. Este lenguaje de markup delimita ámbitos en la página señalando atributos: esto es un título <code>&lt;h1 id=&quot;título&quot;&gt;Título&lt;/h1&gt;</code>, esto un párrafo <code>&lt;p&gt;Párrafo normal.&lt;/p&gt;</code>. Normalmente no vemos esto cuando navegamos una página web, vemos el resultado que nos da el navegador después de leer y procesar el archivo html. Sin embargo podemos abrir un archivo .html con un editor de texto y ver la fuente de la página web. Ahí las cosas no se ven tan bonitas como en el browser, pero está mucho más estructuradas. Si queremos extraer el título de una página debemos seleccionar el texto que se encuentra en <code>&lt;h1&gt;</code> y <code>&lt;/h1&gt;</code>.</p>
+<p>Si esto fuera poco las páginas HTML también son documentos XML y por lo tanto están estructurados con identificadores. Otras forma de obtener todos los títulos de una página sería pedir a un lector de XML que extraiga todos los elementos con el <code>id=&quot;título&quot;</code>.</p>
+<p>Todavía más: para dar a las páginas web mayor atractivo visual se utiliza otro lenguaje llamado CSS. El CSS especifica las características visuales de cada elemento de una página, de que manera debe hacer el render de la página el navegador. Para el scraping la ventaja de CSS es que cada característica visual pertenece a una clase y esto nos permite extraer la información de cada clase. Si el diseñador de la página utiliza claves visuales para separar el contenido –los títulos con una tipografía más grande, las referencias en <em>cursiva</em>- podemos utilizar la indicación al elemento correspondiente de CSS para saber qué parte de la página es la que nos interesa. Dado que la mayoría de sitios utiliza CSS y que las claves visuales son fundamentales en el diseño web y ampliamente utilizadas en la mayoría de los casos seleccionaremos la información relevante utilizando este método. Es más fácil de lo que parece.</p>
+</div>
+<div id="webscrapping-en-r" class="section level2">
+<h2>Webscrapping en R</h2>
+<p>Existen muchas herramientas para hacer web scaping. En este caso nos centramos en herramientas disponibles en R. La ventaja de usar R<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> es que usamos la misma herramienta para adquirir los datos y analizarlos. Es decir, el final de nuestro proceso será una estructura de datos, data.frame o lista, disponible en nuestra sesión de R. Si la estructura de datos es el final del proceso, el principio es más bien una especificación: de qué sitio extraeremos la información y qué partes de las páginas web de ese sitio son las que nos interesa recuperar y sistematizar. Este post presenta un ejemplo de como llegar del punto A al punto B, desde la información que nos interesa a un data.frame prolijo con esa información lista para el análisis.</p>
+<div id="herramientas" class="section level3">
+<h3>Herramientas</h3>
+<p>Aún dentro de R existen múltiples herramientas para hacer web scraping. En este caso utilizaremos la librería de <code>rvest::</code>, escrita y mantenida por el mismísimo Hadley Wickham. <code>rvest::</code> no hace nada que no se pueda hacer con otras herramientas, de hecho es un wrapper que facilita el uso de funciones de otros paquetes que son las que hacen el trabajo pesado. La utilizamos porque, como suele ser el caso con los paquetes desarrollados por Wickham, es fácil de usar, tiene una sintaxis sencilla tanto para escritura como para lectura y es consistente con las convenciones del <code>tidyverse</code>.
+<code>rvest::</code> tiene funciones para prácticamente todo el proceso de scraping de páginas: descargar la página web, seleccionar la información de interés y darle un formato adecuado. Sólo hace falta agregar algo de código adicional para unir las funciones en un pequeño programa ad hoc que hace el trabajo.</p>
+<p>Otra herramienta fundamental para el web scrapping es una que esta usando ahora mismo, sólo que la usará de otro modo. El navegador web. En este caso usaremos Firefox, aunque Chrome también serviría. Los importante es que su navegador cuente con una característica llamada “Modo desarrollador” o “Desarrollador Web”. Esta característica nos permite asociar visualmente el contenido que presenta el navegador –el render de la página- con el código que la produce. De este modo podemos encotrar el camino dentro de la estructura de la página de lo que como humanos identificamos como información relevante: el título de una página, el autor, etc.</p>
+<p>Con el modo desarrollador activado señalamos con el puntero del mouse un elemento y vemos, en la parte inferior, el código html relevante y el camino CSS. Siguiendo ese camino recuperamos la información.</p>
+</div>
+</div>
+</div>
+<div id="ejemplo-de-uso-resumenes-de-la-revista-secuencia" class="section level1">
+<h1>Ejemplo de uso: resúmenes de la revista Secuencia</h1>
+<p><a href="http://secuencia.mora.edu.mx/index.php/Secuencia">Secuencia</a> es una revista publicada por el <a href="www.mora.edu.mx">Instituto Mora</a>, especializada en artículos de historia y ciencias sociales. La revista es de acceso libre y la página web está bien estructurada.</p>
+<div id="objetivos-y-especificacion-de-los-resultados." class="section level2">
+<h2>Objetivos y especificación de los resultados.</h2>
+<p>El scraping de los resúmenes que llevaremos a cabo es un paso intermedio para hacer minería de texto sobre ese corpus, es decir, para preparar el material de otro post que se publicará el futuro. Ese objetivo no es menor a la hora de diseñar el scraping, ya que este interés de análisis es el que determina que información es relevante y que estructura tendrá queremos que tenga para poder analizarlo. Veamos una tabla con el resultado esperado, en este caso para uno de los artículos. Lo haremos manualmente y nos servirá de guía para programar el script que hará el trabajo pesado con la totalidad de los resúmenes.</p>
+<table>
+<caption>Estructura esperada de los datos.</caption>
+<thead>
+<tr class="header">
+<th align="left">id</th>
+<th align="left">numero</th>
+<th align="left">título</th>
+<th align="left">autores</th>
+<th align="left">resumen</th>
+<th align="left">año</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">Núm. 101 (2018)</td>
+<td align="left">La distribución de la tierra y el crecim…</td>
+<td align="left">María Fernan…</td>
+<td align="left">En Buenos Aires, el periodo que transcurre entre 1839 …</td>
+<td align="left">2018</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Trate de no obviar este paso. Lleva algo tiempo especificar la estructura de datos que necesitamos al final del proceso, pero al final es más rápido y da mejores resultados hacerlo así. Además es más fácil escribir un script cuando sabemos qué queremos que haga. No es necesario hacer una tabla, pero sí tener al menos unas notas que especifiquen claramente qué campos de información queremos reunir.</p>
+</blockquote>
+</div>
+<div id="lectrura-de-la-pagina-y-extraccion-de-la-informacion" class="section level2">
+<h2>Lectrura de la página y extracción de la información</h2>
+<p>¡Por fin! Sabiendo en qué pagina está la información y qué partes nos interesan podemos empezar a consultar la página. El primer paso es descargala.</p>
+<pre class="r"><code># Cargar librerías. 
+library(tidyverse)  
+library(rvest)
+library(stringr)    #Para manipulación de cadenas de caracteres.  </code></pre>
+<pre class="r"><code>pagina_cruda &lt;- read_html(&quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1610&quot;)
+
+pagina_cruda</code></pre>
+<pre><code>## {xml_document}
+## &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot; lang=&quot;es-ES&quot; xml:lang=&quot;es-ES&quot;&gt;
+## [1] &lt;head&gt;\n&lt;title&gt;La distribución de la tierra y el crecimiento económi ...
+## [2] &lt;body id=&quot;pkp-common-openJournalSystems&quot;&gt;\n\n&lt;div id=&quot;container&quot;&gt;\n\ ...</code></pre>
+<p>El resultado no parece muy informativo, sin embargo es excelente. No tenemos un error, así que la página se cargó sin problemas. Si el servidor no es estuviera disponible, el enlace fuera incorrecto o ubiera algún conflicto entre el servidor y <code>html_read()</code> no tendríamos la materia prima para seguir procesando la información. Ahora tenemos un objeto en el entorno con el nombre <code>pagina_cruda</code> del que sacar la información. Esa información está disponible en <em>nodos</em>, así que iremos extrayendo uno a uno los nodos importantes. Los identificamos usando el modo desarrollador de nuestro navegador. El primero que queremos ver es el título del artículo, que está en el nodo CSS <code>div#articleTitle</code>.</p>
+<pre class="r"><code>pagina_cruda %&gt;% 
+  html_nodes(&quot;div#articleTitle&quot;) %&gt;%  # Extraigo el nodo
+  html_text()                         #Y el texto dentro del nodo</code></pre>
+<pre><code>## [1] &quot;La distribución de la tierra y el crecimiento económico de la campaña de Buenos Aires. Un estudio de la región oeste, 1839-1867&quot;</code></pre>
+<p>Ya tenemos al título del artículo como un objeto muy reconocible en R: una cadena de caracteres. Perfecto para la minería de texto que vendrá después.</p>
+</div>
+<div id="definir-una-funcion-para-reunir-toda-la-informacion" class="section level2">
+<h2>Definir una función para reunir toda la información</h2>
+<p>Considerando que vamos a leer y sistematizar la información de muchas páginas vale la pena invertir algo de tiempo para definir una función que se encargue del trabajo. Esta función recibe como input un url y regresa como output un data.frame con la estructura definida en la Tabla.
+Es una función simple, primero lee el html del url que le pasamos, luego va extrayendo el texto en los nodos y los reune en un <code>tibble</code>, que es básicamente un data.frame que se imprime mejor en pantalla.</p>
+<pre class="r"><code>leer_resumenes &lt;- function (x){
+  pagina_cruda = read_html(x)
+  tibble (numero = html_nodes(pagina_cruda, &quot;div#breadcrumb&quot;) %&gt;% 
+            html_nodes(&quot;a&quot;) %&gt;% 
+            html_text() %&gt;% 
+            .[2], 
+          titulo = html_nodes(pagina_cruda, &quot;div#articleTitle&quot;) %&gt;% 
+            html_text(), 
+          autor = html_nodes(pagina_cruda, &quot;#authorString&quot;) %&gt;% 
+            html_text(), 
+          resumen = html_nodes(pagina_cruda, &quot;div#articleAbstract&quot;) %&gt;% 
+            html_text()
+  )      #Cierra el tibble
+}
+
+# test
+
+articulo1610 &lt;- leer_resumenes(&quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1610&quot;)
+articulo1610</code></pre>
+<pre><code>## # A tibble: 1 x 4
+##   numero          titulo      autor  resumen                              
+##   &lt;chr&gt;           &lt;chr&gt;       &lt;chr&gt;  &lt;chr&gt;                                
+## 1 Núm. 101 (2018) La distrib… María… &quot;\n\t\tResumen\n\t\tEn Buenos Aires,…</code></pre>
+<p>La función… funciona. Recibe un url y regresa un tibble con los datos esperados para cada columna. Sin embargo todavía no están limpios: en la columna <code>resumen</code> aparecen saltos de línea (<code>\n</code>) y tabulaciones (<code>\t</code>). Esto es bastante frecuente y la solución es manipular las cadenas de caracteres para quitar los sobrantes. También se repite la palabra “Resumen”. No agrega mucha información, ya sabíamos que era un resumen.</p>
+<pre class="r"><code>articulo1610 %&gt;% 
+  mutate(resumen = str_remove_all(resumen, &quot;\\n|\\t&quot;)) %&gt;%  #\\ para escapar \. Esto es R.
+  mutate(resumen = str_remove_all(resumen, &quot;^Resumen&quot;)) %&gt;% #^ para que solo captura al inicio de línea.
+  knitr::kable(caption = &quot;Una registro de resumen de la revista Secuencia&quot;)</code></pre>
+<table>
+<caption><span id="tab:limpieza">Table 1: </span>Una registro de resumen de la revista Secuencia</caption>
+<thead>
+<tr class="header">
+<th align="left">numero</th>
+<th align="left">titulo</th>
+<th align="left">autor</th>
+<th align="left">resumen</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Núm. 101 (2018)</td>
+<td align="left">La distribución de la tierra y el crecimiento económico de la campaña de Buenos Aires. Un estudio de la región oeste, 1839-1867</td>
+<td align="left">María Fernanda Barcos</td>
+<td align="left">En Buenos Aires, el periodo que transcurre entre 1839 y 1869 se caracterizó por un crecimiento económico casi constante. Dicho proceso generó una creciente desigualdad en la distribución de la riqueza (fundamentalmente de la tierra) pero produjo una importante movilidad social, sobre todo entre 1839 y 1855. La región oeste presenta particularidades bien marcadas en el proceso señalado que aún no han sido estudiadas en detalle. A partir del análisis conjunto del impuesto de la contribución directa y los expedientes de tierras, se estudian las causas del movimiento diferencial que se operó allí. Se analizan los partidos de Chivilcoy, Mercedes y Suipacha (expartido de la Guardia de Luján hasta 1845) porque sintetizan muy bien los cambios operados en la región de estudio.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Aunque pudiera ser más limitado que otras herramientas.<a href="#fnref1" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
+
+    </section>
+</main>
+
+        </div><footer>
+    <span class="footer-text">Powered by <a href="https://gohugo.io/" target="_blank">Hugo</a></span>
+</footer>
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</body>
+</html>

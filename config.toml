@@ -1,0 +1,37 @@
+baseurl = "/"
+languageCode = "zh-cmn-Hant"
+title = "R4SC"
+theme = "hugo-bingo"
+
+disableHugoGeneratorInject = true
+enableEmoji = true
+footnoteReturnLinkContents = "↩"
+googleAnalytics = ""
+
+[permalinks]
+  post = "/post/:slug/"
+
+[menu]
+
+  [[menu.main]]
+    identifier = "home"
+    name = "Inicio"
+    url = "/"
+    weight = 10
+
+  [[menu.main]]
+    identifier = "post"
+    name = "Blog"
+    url = "/post"
+    weight = 20
+
+  [[menu.main]]
+    identifier = "guias"
+    name = "Guías"
+    url = "/rsociales"
+    weight = 20
+    
+[params]
+  email = "martinpala@gmail.com"
+  github = "martinpaladino"
+  medium = "medium_username"

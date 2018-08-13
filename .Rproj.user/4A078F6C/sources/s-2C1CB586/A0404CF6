@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1534124240577.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "A0404CF6",
+    "lastKnownWriteTime" : 1534132391,
+    "last_content_update" : 1534132391070,
+    "path" : "~/Documentos/gundamex/content/post/2018-08-12-web-scraping-i.Rmd",
+    "project_path" : "content/post/2018-08-12-web-scraping-i.Rmd",
+    "properties" : {
+        "chunk_output_type" : "console",
+        "cursorPosition" : "116,1",
+        "scrollLine" : "96"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
