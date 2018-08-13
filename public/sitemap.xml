@@ -3,64 +3,64 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://martinpaladino.githu.io/post/hola-mundo/</loc>
+    <loc>https://martinpaladino.github.io/post/hola-mundo/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/post/web-scraping-i/</loc>
+    <loc>https://martinpaladino.github.io/post/web-scraping-i/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/categories/blog/</loc>
-    <lastmod>2018-08-12T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://martinpaladino.githu.io/categories/</loc>
+    <loc>https://martinpaladino.github.io/categories/blog/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/</loc>
-    <lastmod>2018-08-12T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://martinpaladino.githu.io/tags/nlp/</loc>
+    <loc>https://martinpaladino.github.io/categories/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/post/</loc>
+    <loc>https://martinpaladino.github.io/</loc>
+    <lastmod>2018-08-12T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://martinpaladino.github.io/tags/nlp/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/categories/r/</loc>
+    <loc>https://martinpaladino.github.io/post/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/tags/rvest/</loc>
+    <loc>https://martinpaladino.github.io/categories/r/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/tags/scraping/</loc>
+    <loc>https://martinpaladino.github.io/tags/rvest/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>https://martinpaladino.githu.io/tags/</loc>
+    <loc>https://martinpaladino.github.io/tags/scraping/</loc>
+    <lastmod>2018-08-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://martinpaladino.github.io/tags/</loc>
     <lastmod>2018-08-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>

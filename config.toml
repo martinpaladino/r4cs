@@ -1,4 +1,4 @@
-baseurl = "/"
+baseurl = "https://martinpaladino.github.io"
 languageCode = "zh-cmn-Hant"
 title = "R4SC"
 theme = "hugo-bingo"

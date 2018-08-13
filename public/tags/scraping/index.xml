@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Scraping on R4SC</title>
-    <link>https://martinpaladino.githu.io/tags/scraping/</link>
+    <link>https://martinpaladino.github.io/tags/scraping/</link>
     <description>Recent content in Scraping on R4SC</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cmn-Hant</language>
     <lastBuildDate>Sun, 12 Aug 2018 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="https://martinpaladino.githu.io/tags/scraping/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://martinpaladino.github.io/tags/scraping/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Web scraping I</title>
-      <link>https://martinpaladino.githu.io/post/web-scraping-i/</link>
+      <link>https://martinpaladino.github.io/post/web-scraping-i/</link>
       <pubDate>Sun, 12 Aug 2018 00:00:00 +0000</pubDate>
       
-      <guid>https://martinpaladino.githu.io/post/web-scraping-i/</guid>
+      <guid>https://martinpaladino.github.io/post/web-scraping-i/</guid>
       <description>Primera entrega.
  ¿Qué es el web scraping? Una parte sustantiva –y creciente- de la información que se produce se hace pública a través de páginas web. El web scraping es una técnica para extraer información de estas páginas y sistematizarla, ya sea para conservarla, analizarla o ambas. Si omitimos la parte de “conservarla” el meollo del asunto está en sistematizarla y R es de gran ayuda para lograrlo.</description>
     </item>

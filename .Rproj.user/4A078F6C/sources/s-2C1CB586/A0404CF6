@@ -9,12 +9,12 @@
     "id" : "A0404CF6",
     "lastKnownWriteTime" : 1534132391,
     "last_content_update" : 1534132391070,
-    "path" : "~/Documentos/gundamex/content/post/2018-08-12-web-scraping-i.Rmd",
+    "path" : "~/gdrive/r4cs/content/post/2018-08-12-web-scraping-i.Rmd",
     "project_path" : "content/post/2018-08-12-web-scraping-i.Rmd",
     "properties" : {
         "chunk_output_type" : "console",
         "cursorPosition" : "116,1",
-        "scrollLine" : "96"
+        "scrollLine" : "0"
     },
     "relative_order" : 5,
     "source_on_save" : false,

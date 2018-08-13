@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "0",
+    "hash" : "3727859158",
     "id" : "FCE49D47",
-    "lastKnownWriteTime" : 1534123898,
-    "last_content_update" : 1534123898059,
-    "path" : "~/Documentos/gundamex/config.toml",
+    "lastKnownWriteTime" : 1534136287,
+    "last_content_update" : 1534136287907,
+    "path" : "~/gdrive/r4cs/config.toml",
     "project_path" : "config.toml",
     "properties" : {
-        "cursorPosition" : "16,23",
-        "scrollLine" : "6"
+        "cursorPosition" : "0,40",
+        "scrollLine" : "0"
     },
     "relative_order" : 1,
     "source_on_save" : false,
