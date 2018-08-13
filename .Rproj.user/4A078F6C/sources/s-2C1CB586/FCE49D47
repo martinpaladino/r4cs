@@ -5,14 +5,14 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "3727859158",
+    "hash" : "2790871625",
     "id" : "FCE49D47",
-    "lastKnownWriteTime" : 1534136287,
-    "last_content_update" : 1534136287907,
+    "lastKnownWriteTime" : 1534137660,
+    "last_content_update" : 1534137660711,
     "path" : "~/gdrive/r4cs/config.toml",
     "project_path" : "config.toml",
     "properties" : {
-        "cursorPosition" : "0,40",
+        "cursorPosition" : "0,12",
         "scrollLine" : "0"
     },
     "relative_order" : 1,

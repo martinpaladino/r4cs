@@ -2,39 +2,39 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Tags on R4SC</title>
-    <link>https://martinpaladino.github.io/tags/</link>
+    <link>/tags/</link>
     <description>Recent content in Tags on R4SC</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cmn-Hant</language>
     <lastBuildDate>Sun, 12 Aug 2018 00:00:00 +0000</lastBuildDate>
     
-	<atom:link href="https://martinpaladino.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Nlp</title>
-      <link>https://martinpaladino.github.io/tags/nlp/</link>
+      <link>/tags/nlp/</link>
       <pubDate>Sun, 12 Aug 2018 00:00:00 +0000</pubDate>
       
-      <guid>https://martinpaladino.github.io/tags/nlp/</guid>
+      <guid>/tags/nlp/</guid>
       <description></description>
     </item>
     
     <item>
       <title>Rvest</title>
-      <link>https://martinpaladino.github.io/tags/rvest/</link>
+      <link>/tags/rvest/</link>
       <pubDate>Sun, 12 Aug 2018 00:00:00 +0000</pubDate>
       
-      <guid>https://martinpaladino.github.io/tags/rvest/</guid>
+      <guid>/tags/rvest/</guid>
       <description></description>
     </item>
     
     <item>
       <title>Scraping</title>
-      <link>https://martinpaladino.github.io/tags/scraping/</link>
+      <link>/tags/scraping/</link>
       <pubDate>Sun, 12 Aug 2018 00:00:00 +0000</pubDate>
       
-      <guid>https://martinpaladino.github.io/tags/scraping/</guid>
+      <guid>/tags/scraping/</guid>
       <description></description>
     </item>
     
