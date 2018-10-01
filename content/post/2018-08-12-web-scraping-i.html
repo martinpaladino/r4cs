@@ -24,7 +24,7 @@ editor_options:
 <p>Una parte sustantiva –y creciente- de la información que se produce se hace pública a través de páginas web. El <a href="https://es.wikipedia.org/wiki/Web_scraping">web scraping</a> es una técnica para extraer información de estas páginas y sistematizarla, ya sea para conservarla, analizarla o ambas. Si omitimos la parte de “conservarla” el meollo del asunto está en sistematizarla y R es de gran ayuda para lograrlo.</p>
 <div id="automatizar-un-procedimiento-tedioso" class="section level2">
 <h2>Automatizar un procedimiento tedioso</h2>
-<p>Las páginas web están diseñadas para ser vistas por los usuarios a través de un navegador. Por ese motivo si queremos analizar la información la información no podemos utilizar las páginas web de manera directa, a menos que todo el análisis que hagamos sea utilizando a nuestro cerebro de manera exclusiva. Alternativamete podemos copiar y pegar desde el navegador a una planilla de cálculos y luego analizar la información en esa planilla. En ese caso estaríamos haciendo manualmente dos pasos importantes del web scraping, la adquisición de los datos al acceder a la página con el navegador y la sistematización de la información al seleccionar las partes que nos interesan, copiarlas y pegarlas en el lugar correcto de planilla de cálculos.</p>
+<p>Las páginas web están diseñadas para ser vistas por los usuarios a través de un navegador. Por ese motivo si queremos analizar la información no podemos utilizar las páginas web de manera directa, a menos que todo el análisis que hagamos sea utilizando a nuestro cerebro de manera exclusiva. Alternativamete podemos copiar y pegar desde el navegador a una planilla de cálculos y luego analizar la información en esa planilla. En ese caso estaríamos haciendo manualmente dos pasos importantes del web scraping, la adquisición de los datos al acceder a la página con el navegador y la sistematización de la información al seleccionar las partes que nos interesan, copiarlas y pegarlas en el lugar correcto de planilla de cálculos.</p>
 <p>Este proceso manual tiene algunos problemas. El principal es lo tedioso del proceso, sobre todo si buscamos información de muchas páginas web. Para unas pocas páginas no hay problema, pero para 100 o 1000 nos llevaría demasiado tiempo. El segundo es que al hacerlo manualmente no podemos volver sobre nuestros pasos para verificar posibles errores. Es mucho mejor automatizar el procedimiento.</p>
 <p>¿Cómo es posible que un simple programa extraiga la información relevante? Más aún ¿Cómo puede identificar en una página qué elemento corresponde a cada cosa? Las páginas web están diseñadas para ser visualizadas por humanos a través de de un navegador, sin embargo para lograr este propósito –mostrarse de manera correcta- deben contener, además de la información propiamente dicha, metaiformación, es decir, información sobre la información. Si esta metainformación es consistente podemos utilizarla para identificar los campos de información en la página y extraerlos de manera sistemática.</p>
 <p>Las páginas web están escritas en el lenguaje HTML. Este lenguaje de markup delimita ámbitos en la página señalando atributos: esto es un título <code>&lt;h1 id=&quot;título&quot;&gt;Título&lt;/h1&gt;</code>, esto un párrafo <code>&lt;p&gt;Párrafo normal.&lt;/p&gt;</code>. Normalmente no vemos esto cuando navegamos una página web, vemos el resultado que nos da el navegador después de leer y procesar el archivo html. Sin embargo podemos abrir un archivo .html con un editor de texto y ver la fuente de la página web. Ahí las cosas no se ven tan bonitas como en el browser, pero está mucho más estructuradas. Si queremos extraer el título de una página debemos seleccionar el texto que se encuentra en <code>&lt;h1&gt;</code> y <code>&lt;/h1&gt;</code>.</p>
@@ -149,7 +149,7 @@ articulo1610</code></pre>
 </tbody>
 </table>
 <p>Más allá de la relevancia del artículo que hemos recuperado lo que nos interesa es sistematizar todos los resúmenes de la revista. Como disponemos de una función que recupera y sistematiza cada resumen podemos iterar esa función sobre una lista de url y obtener una lista de data.frame, uno con cada resumen sistematizado. Luego podemos reunir esa lista de data.frame en una única estructura de datos.</p>
-<p>En una próxima entrega veremos una forma de crear, utilizando estas mimas herramientas, una lista de enlaces. Por ahora las capturamos manualmente.</p>
+<p>En una próxima entrega veremos una forma de crear, utilizando estas mismas herramientas, una lista de enlaces. Por ahora las capturamos manualmente.</p>
 <pre class="r"><code>direcciones &lt;- list(&quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1237&quot;, 
                     &quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1338&quot;,
                     &quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1439&quot;,
@@ -196,18 +196,24 @@ resumenes %&gt;%
 <td align="left">El presente artículo muestra una de las facetas menos estudiadas del general Salvador Alvarado: su papel en la sucesión presidencial de 1920. A través de la revisión de fuentes poco exploradas como los periódicos El Heraldo de México y El Monitor Republicano podrá observarse la complejidad y tensión del ambiente político en la coyuntura electoral. Alvarado modificó su postura conforme avanzó la contienda, de una actitud belicosa que lo llevó a crear su propio partido político contra los generales Pablo González y Álvaro Obregón, pasó a ser un aliado del grupo sonorense en la lucha contra la imposición del candidato carrancista, Ignacio Bonillas. Además de comprender a un Alvarado interesado en la silla presidencial, este trabajo muestra el accionar de los periódicos capitalinos como espacios de discusión e impulsores de plataformas políticas en las elecciones que posicionaron a los sonorenses en la cúspide del poder.</td>
 </tr>
 <tr class="even">
+<td align="left">Núm. 102 (2018)</td>
+<td align="left">El álbum fotográfico de Luciano Gallardo: familia y cohesión social</td>
+<td align="left">Silvana Berenice Valencia Pulido</td>
+<td align="left"> Luciano Gallardo fue propietario de fábricas decimonónicas de “vino mezcal” ubicadas en Jalisco y que corresponden al antecedente de la actual empresa “Tequila Cuervo”. La posición social y económica de la familia Gallardo le concedió un gran reconocimiento dentro de la clase burguesa jalisciense de la época; misma que le generó una amplia gama de vínculos laborales y amistosos. Generalmente, los documentos escritos hacen referencia a las relaciones laborales y del ámbito público que poseían personajes como este. Sin embargo, aparentemente existe poca información acerca de la vida privada de la burguesía mexicana. El álbum fotográfico para tarjetas de visita de Luciano Gallardo es testimonio de la vida cotidiana de una familia burguesa de Guadalajara durante la segunda mitad del siglo xix; así como de la cohesión grupal al interior de dicha clase social </td>
+</tr>
+<tr class="odd">
 <td align="left">2018</td>
 <td align="left">Rafael Huertas (coord.), Psiquiatría y antipsiquiatría en el segundo franquismo y la Transición, Madrid, Los libros de la Catarata, 2017.</td>
 <td align="left">José Antonio Maya González</td>
 <td align="left">.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">Núm. 71 (2008)</td>
 <td align="left">El proceso de antropización en el lago de Chapala</td>
 <td align="left">Alejandra Ojeda Sampson, Francisco Covarrubias Villa, María Guadalupe Arceo Ortega</td>
 <td align="left">El lago de Chapala, perteneciente a la cuenca Lerma-Chapala-Santiago, debe abordarse de manera totalizadora puesto que las actuales condiciones del sitio obedecen principalmente, a las acciones antrópicas  que se han llevado a cabo tanto en la cuenca como en el lago mismo y desde la época prehispánica hasta hoy día. Es por esto que este estudio se realizó bajo el método de la dialéctica crítica con la intencionalidad de potenciar sus elementos constituyentes para que transite de un estado de deterioro ambiental y humano a uno de equilibrio y equidad social permitiendo así que recupere las relaciones sustentables que el hombre sostenía con el lugar.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">Núm. 82 (2012)</td>
 <td align="left">El uso de la imagen como fuente primaria en la investigación social. Experiencia metodológica de una etnografía visual en el caso de estudio: territorialidades de la vida cotidiana en la plancha del Zócalo de la ciudad de México</td>
 <td align="left">Raúl Romero Ruiz</td>

@@ -1,0 +1,213 @@
+---
+title: Web Scraping II
+author: Martín Paladino
+date: '2018-10-01'
+slug: web-scraping-ii
+categories:
+  - R
+  - blog
+tags:
+  - scraping
+  - nlp
+  - tidyverse
+  - rvest
+isCJKLanguage: no
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+<blockquote>
+<p>Segunda entrega.</p>
+</blockquote>
+<div id="scraping-de-un-sitio-completo" class="section level1">
+<h1>Scraping de un sitio completo</h1>
+<p>En la <a href="/post/web-scraping-i/">entrega anterior</a> revisamos los aspectos básicos del web scrapping: por qué, para qué y cómo.</p>
+<p>Cargar una página web a la vez ya es un ahorro de tiempo y en algunos casos es todo lo que necesitamos: leer una tabla o algún texto. Sin embargo es común que nos interese leer y almacenar de manera estructura el contenido de varias páginas web. Para hacerlo tenemos que llevar a cabo algunos pasos previos:</p>
+<ol style="list-style-type: decimal">
+<li>Identificar una página en el sitio web de interés que contenga el índice de las entradas que queremos consultar.</li>
+<li>Crear una lista con todas la direcciones (URL) de las que nos interesa extraer información.</li>
+<li>Pasar esa lista a la función que extrae la información de cada página, generando una estructura de datos para cada página.</li>
+<li>Reunir la información de cada página en una estructura de datos general.</li>
+</ol>
+</div>
+<div id="aproximacion-map-reduce" class="section level1">
+<h1>Aproximación ’map-reduce`</h1>
+<p>Los pasos 3 y 4 corresponden a una aproximación muy útil de programación que se llama <code>map-reduce</code>. Es una aproximación al problema de repetir una operación muchas veces, lo que técnicamente se llama <em>iterar</em>.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> En este caso iteramos una lista de direcciones (<code>URL</code>) en una función que lee el contenido de las páginas en esa dirección y almacenamos el resultado en una lista. Esta es la parte <code>map</code>. Posteriormente convertimos esa lista a una data.frame con todas las entradas. Es la parte <code>reduce</code>.</p>
+</div>
+<div id="aplicacion-a-la-revista-secuencia" class="section level1">
+<h1>Aplicación a la Revista Secuencia</h1>
+<div id="generar-una-lista-de-direcciones-a-cada-numero-de-la-revista" class="section level2">
+<h2>Generar una lista de direcciones a cada número de la revista</h2>
+<p>En el caso de la Secuencia la <a href="%22http://secuencia.mora.edu.mx/index.php/Secuencia/issue/archive%22">dirección</a> contiene el archivo de la revista. En esta página hay en enlaces a cada número. Visitando esos enlaces encontramos, a su vez, los enlaces para cada artículo y allí encontraremos, finalmente, los resúmenes.</p>
+<p>El proceso en general no es muy distinto al que usamos para encontrar dentro de la estructura de la página a los resumes y que vimos en la entrada 1 de web scraping. Utilizamos el modo desarrollar del navegador para dar con las etiquetas y atributos de los enlaces. En este caso encontramos los enlaces a cada número son un título de nivel 4 <code>h4</code>, con la etiqueta <code>a</code> del que queremos el atributo <code>href</code>, que es el nombre interno que tienen los enlaces.</p>
+<p><img src="images/inspector_web_secuencia_archivo.png" />{width = 50%}</p>
+<pre class="r"><code>library(rvest)</code></pre>
+<pre><code>## Loading required package: xml2</code></pre>
+<pre class="r"><code>library(stringr)
+library(knitr)
+library(purrr) # Para iterar sobre listas</code></pre>
+<pre><code>## 
+## Attaching package: &#39;purrr&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:rvest&#39;:
+## 
+##     pluck</code></pre>
+<pre class="r"><code># Hay dos páginas con el índice de la revista.
+# Obtego los enlaces por separado y luego los uno. 
+
+numeros_secuencia1 &lt;- read_html(&quot;http://secuencia.mora.edu.mx/index.php/Secuencia/issue/archive&quot;) %&gt;%
+  html_nodes(&quot;h4&quot;) %&gt;% 
+  html_nodes(&quot;a&quot;) %&gt;% 
+  html_attr(&quot;href&quot;)  
+
+numeros_secuencia2 &lt;- read_html(&quot;http://secuencia.mora.edu.mx/index.php/Secuencia/issue/archive?issuesPage=2#issues&quot;) %&gt;%
+  html_nodes(&quot;h4&quot;) %&gt;% 
+  html_nodes(&quot;a&quot;) %&gt;% 
+  html_attr(&quot;href&quot;)
+
+numeros_secuencia &lt;- c(numeros_secuencia1, numeros_secuencia2)
+
+kable(head(numeros_secuencia))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">x</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><a href="http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/118" class="uri">http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/118</a></td>
+</tr>
+<tr class="even">
+<td align="left"><a href="http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/117" class="uri">http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/117</a></td>
+</tr>
+<tr class="odd">
+<td align="left"><a href="http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/116" class="uri">http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/116</a></td>
+</tr>
+<tr class="even">
+<td align="left"><a href="http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/115" class="uri">http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/115</a></td>
+</tr>
+<tr class="odd">
+<td align="left"><a href="http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/113" class="uri">http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/113</a></td>
+</tr>
+<tr class="even">
+<td align="left"><a href="http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/112" class="uri">http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/112</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="generar-una-lista-con-las-direcciones-de-cada-articulo" class="section level2">
+<h2>Generar una lista con las direcciones de cada artículo</h2>
+<p>Con las direcciones de cada número de la revista podemos pasar al suguiente paso: crear la lista con las URL de cada artículo. Para eso creamos una función que lea cada número de revista y recolecte los enlaces de cada artículo. La llamaremos <code>listar_enlaces</code> y le daremos como input la lista de números de revistas. La estructura de datos final de esta etapa será un data.frame con dos columnas, uno con la dirección del artículo y otro con el número de la revista a la que pertenece.</p>
+<pre class="r"><code>listar_enlaces &lt;- function(x) { 
+  pagina_cruda &lt;- read_html(x)
+html_nodes(pagina_cruda, &quot;div.tocTitle&quot;) %&gt;% 
+  html_nodes(&quot;a&quot;) %&gt;% 
+  html_attr(&quot;href&quot;) -&gt; enlaces
+html_node(pagina_cruda, &quot;h2&quot;) %&gt;% html_text() -&gt; numero
+as.data.frame(cbind(enlaces, numero))}
+
+# Test: 
+
+listar_enlaces(&quot;http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/112&quot;) </code></pre>
+<pre><code>##                                                              enlaces
+## 1 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1464
+## 2 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1396
+## 3 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1416
+## 4 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1400
+## 5 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1439
+## 6 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1542
+## 7 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1398
+## 8 http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1430
+##           numero
+## 1 Núm. 99 (2017)
+## 2 Núm. 99 (2017)
+## 3 Núm. 99 (2017)
+## 4 Núm. 99 (2017)
+## 5 Núm. 99 (2017)
+## 6 Núm. 99 (2017)
+## 7 Núm. 99 (2017)
+## 8 Núm. 99 (2017)</code></pre>
+<p>Luego iteramos esa función a lo largo de la lista con los URL de los números de revista. Al resultado lo llamaremos <code>enlaces</code> y el que usaremos para obtener, en su momento los resúmenes. En esta parte vamos a aplicar el enfoque <code>map-reduce</code> con la función <code>map_df()</code> de la librería <code>purrr</code>. Esta función aplica una función a una lista (en este caso la función <code>listar_enlaces()</code> a la lista <code>numeros_secuencia</code>) y nos regresa el resultado “reducido” a un data.frame.</p>
+<pre class="r"><code># Aquí aplicamos la función que preparamos y testeamos en el bloque anterior.
+enlaces &lt;- map_df(numeros_secuencia, listar_enlaces)</code></pre>
+</div>
+<div id="leer-los-resumenes-y-organizarlos-como-un-data.frame" class="section level2">
+<h2>Leer los resúmenes y organizarlos como un data.frame</h2>
+<p>Este es el último paso, que producirá la estructura de datos que estamos buscando. Para eso, una vez más creamos una función personalizada llamada <code>leer_resumenes()</code> que accede a cada artículo y captura el título del artículo, texto del resumen, autores y los datos del número en que se publicó. Para cada una de estas columnas extraemos la información relevante con cadenas de <code>html_node()</code>.</p>
+<pre class="r"><code># Leer los resúmenes. 
+
+leer_resumenes &lt;- function (x) {
+  print(x)
+  pagina_cruda = read_html(x)
+  html_nodes (pagina_cruda, &#39;div#articleTitle&#39;) %&gt;% 
+    html_text() -&gt; titulo
+  html_nodes(pagina_cruda, &#39;div#authorString&#39;) %&gt;% 
+    html_text() -&gt; autores
+  html_nodes(pagina_cruda, &#39;div#articleAbstract&#39;) %&gt;%
+    .[1] %&gt;% 
+    html_text() %&gt;%
+    str_remove_all(&quot;\\r&quot;) %&gt;%
+    str_remove_all(&#39;\\t&#39;) %&gt;% 
+    str_replace_all(&quot;\\n&quot;, &quot; &quot;) %&gt;% 
+    str_remove_all(&#39;\\- &#39;) -&gt; resumen
+html_nodes (pagina_cruda, &#39;div#breadcrumb&#39;) %&gt;% 
+    html_nodes(&#39;a&#39;) %&gt;% 
+    .[2] %&gt;% 
+    html_text() -&gt; numero  
+    data.frame(autores, titulo, resumen, numero)
+}
+
+# Test con algunos enlaces
+
+map_df(enlaces[100:102,1], leer_resumenes) -&gt; resumenes</code></pre>
+<pre><code>## [1] &quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1377&quot;
+## [1] &quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1391&quot;
+## [1] &quot;http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1379&quot;</code></pre>
+<pre class="r"><code># Para extraer todos los enlaces: 
+# map_df(enlaces$enlace, leer_resumenes) -&gt; resumenes
+# Para guardar los resultados: 
+# write_csv(resumenes, &quot;./resumenes_secuencia.csv&quot;)
+
+kable(resumenes)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">autores</th>
+<th align="left">titulo</th>
+<th align="left">resumen</th>
+<th align="left">numero</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Gisela Moncada González</td>
+<td align="left">La gestión municipal: ¿cómo administrar las plazas y los mercados de la ciudad de México? 1824-1840</td>
+<td align="left">Resumen El texto analiza la gestión de los servicios públicos en la ciudad de México, y en particular, la administración de las plazas y los mercados a través de contratas a particulares. La problemática se centra en las dificultades que enfrentó la administración municipal para regular el comercio urbano. La fuente documental empleada es la Ordenanza Municipal de 1840 y el estudio detallado de las comisiones que integraban al Ayuntamiento de México entre 1810 y 1840. La investigación concluye que la falta de un orden jurídico que regulara la gestión municipal provocó una mala organización y planeación en los servicios públicos de la ciudad. Por ello, las contratas, que parecían una salida eficiente en la administración municipal, terminaron por convertirse en negocios entre particulares, debido a la incapacidad del gobierno para vigilarlos y regularlos, así como por la falta de recursos económicos para sostenerlas. </td>
+<td align="left">Núm. 95 (2016)</td>
+</tr>
+<tr class="even">
+<td align="left">Ma. Eugenia Chaoul Pereyra</td>
+<td align="left">Un aparato ortopédico para el magisterio: la Dirección General de Educación Primaria y los maestros en el Distrito Federal, 1896-1913</td>
+<td align="left">Resumen Al convertirse en empleados federales en 1896, los maestros de primaria del Distrito Federal y de los territorios (Nayarit y Baja California) ocuparon un papel singular para poner en marcha la política educativa del régimen porfiriano. En el marco de la anhelada centralización educativa, las autoridades promovieron que los docentes se desempeñaran como agentes modernizadores y pudieran difundir los nuevos contenidos pedagógicos. Sin embargo, la estructura burocrática diseñada para tal fin derivó en un aparato que supervisó, controló e inmovilizó a los maestros relegándolos a ocupar un papel receptivo, secundario y dependiente de los favores de la autoridad. Este desempeño fue crucial para entender las características que adquirió la organización magisterial al despuntar la revolución</td>
+<td align="left">Núm. 95 (2016)</td>
+</tr>
+<tr class="odd">
+<td align="left">Carlos Sola Ayape</td>
+<td align="left">Al rescate de Franco y del franquismo: el hispanismo mexicano en la encrucijada de la Segunda Guerra Mundial</td>
+<td align="left">Resumen En 1945, y una vez terminada la segunda guerra mundial, los países vencedores –México, entre ellos– identificaron al régimen franquista como un saldo de guerra y, entre otras medidas en contra, se prohibió el ingreso de España en las Naciones Unidas. En defensa propia, y con un Franco acorralado, los arquitectos del franquismo diseñaron un plan estratégico para aguantar los embates del exterior, contando para ello con la ayuda de hispanistas mexicanos como Alfonso Junco o Jesús Guisa y Azevedo. Así, y teniendo en cuenta los perfiles de esta encrucijada histórica, el objetivo del presente artículo es analizar el discurso del hispanismo mexicano, concebido instrumentalmente para salir en defensa de Franco y del franquismo.  </td>
+<td align="left">Núm. 95 (2016)</td>
+</tr>
+</tbody>
+</table>
+<p>Para no abusar del servicio que nos da la Revista Secuencia es recomendable que, una vez que hemos recoletado toda la información, la guardemos en un archivo .csv. De este modo la tendremos disponible para el análisis posterior, sin tener que esperar que la descarga y sin saturar el servicio.</p>
+<p>En una entrega siguiente comenzaremos a analizar estos resúmenes usando procesamiento de lenguaje natural.</p>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Otra aproximación para hacer iteraraciones consiste en utilizar estructuras de control del tipo <code>for</code> o <code>while</code> y manejar de manera explícita la operación a través de índices. La ventaja de la aproximación <code>map-reduce</code> es que nos ahorramos el proceso tedioso de escribir la estructura de control.<a href="#fnref1" class="footnote-back">↩</a></p></li>
+</ol>
+</div>

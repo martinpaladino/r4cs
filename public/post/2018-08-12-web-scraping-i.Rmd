@@ -22,7 +22,7 @@ Una parte sustantiva --y creciente- de la información que se produce se hace p�
 
 ## Automatizar un procedimiento tedioso
 
-Las páginas web están diseñadas para ser vistas por los usuarios a través de un navegador. Por ese motivo si queremos analizar la información la información no podemos utilizar las páginas web de manera directa, a menos que todo el análisis que hagamos sea utilizando a nuestro cerebro de manera exclusiva. Alternativamete podemos copiar y pegar desde el navegador a una planilla de cálculos y luego analizar la información en esa planilla. En ese caso estaríamos haciendo manualmente dos pasos importantes del web scraping, la adquisición de los datos al acceder a la página con el navegador y la sistematización de la información al seleccionar las partes que nos interesan, copiarlas y pegarlas en el lugar correcto de planilla de cálculos. 
+Las páginas web están diseñadas para ser vistas por los usuarios a través de un navegador. Por ese motivo si queremos analizar la información no podemos utilizar las páginas web de manera directa, a menos que todo el análisis que hagamos sea utilizando a nuestro cerebro de manera exclusiva. Alternativamete podemos copiar y pegar desde el navegador a una planilla de cálculos y luego analizar la información en esa planilla. En ese caso estaríamos haciendo manualmente dos pasos importantes del web scraping, la adquisición de los datos al acceder a la página con el navegador y la sistematización de la información al seleccionar las partes que nos interesan, copiarlas y pegarlas en el lugar correcto de planilla de cálculos. 
 
 Este proceso manual tiene algunos problemas. El principal es lo tedioso del proceso, sobre todo si buscamos información de muchas páginas web. Para unas pocas páginas no hay problema, pero para 100 o 1000 nos llevaría demasiado tiempo. El segundo es que al hacerlo manualmente no podemos volver sobre nuestros pasos para verificar posibles errores. Es mucho mejor automatizar el procedimiento.
 
@@ -133,7 +133,7 @@ articulo1610 %>%
 
 Más allá de la relevancia del artículo que hemos recuperado lo que nos interesa es sistematizar todos los resúmenes de la revista. Como disponemos de una función que recupera y sistematiza cada resumen podemos iterar esa función sobre una lista de url y obtener una lista de data.frame, uno con cada resumen sistematizado. Luego podemos reunir esa lista de data.frame en una única estructura de datos. 
 
-En una próxima entrega veremos una forma de crear, utilizando estas mimas herramientas, una lista de enlaces. Por ahora las capturamos manualmente. 
+En una próxima entrega veremos una forma de crear, utilizando estas mismas herramientas, una lista de enlaces. Por ahora las capturamos manualmente. 
 
 ```{r, iterar}
 direcciones <- list("http://secuencia.mora.edu.mx/index.php/Secuencia/article/view/1237", 

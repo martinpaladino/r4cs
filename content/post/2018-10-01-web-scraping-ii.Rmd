@@ -1,0 +1,139 @@
+---
+title: Web Scraping II
+author: Martín Paladino
+date: '2018-10-01'
+slug: web-scraping-ii
+categories:
+  - R
+  - blog
+tags:
+  - scraping
+  - nlp
+  - tidyverse
+  - rvest
+isCJKLanguage: no
+editor_options: 
+  chunk_output_type: console
+---
+
+> Segunda entrega.
+
+# Scraping de un sitio completo
+
+En la [entrega anterior](/post/web-scraping-i/) revisamos los aspectos básicos del web scrapping: por qué, para qué y cómo. 
+
+Cargar una página web a la vez ya es un ahorro de tiempo y en algunos casos es todo lo que necesitamos: leer una tabla o algún texto. Sin embargo es común que nos interese leer y almacenar de manera estructura el contenido de varias páginas web. Para hacerlo tenemos que llevar a cabo algunos pasos previos: 
+
+
+1. Identificar una página en el sitio web de interés que contenga el índice de las entradas que queremos consultar.
+2. Crear una lista con todas la direcciones (URL) de las que nos interesa extraer información. 
+3. Pasar esa lista a la función que extrae la información de cada página, generando una estructura de datos para cada página.
+4. Reunir la información de cada página en una estructura de datos general. 
+
+# Aproximación 'map-reduce` 
+
+Los pasos 3 y 4 corresponden a una aproximación muy útil de programación que se llama `map-reduce`. Es una aproximación al problema de repetir una operación muchas veces, lo que técnicamente se llama *iterar*.^[Otra aproximación para hacer iteraraciones consiste en utilizar estructuras de control del tipo `for` o `while` y manejar de manera explícita la operación a través de índices. La ventaja de la aproximación `map-reduce` es que nos ahorramos el proceso tedioso de escribir la estructura de control.] En este caso iteramos una lista de direcciones (`URL`) en una función que lee el contenido de las páginas en esa dirección y almacenamos el resultado en una lista. Esta es la parte `map`. Posteriormente convertimos esa lista a una data.frame con todas las entradas. Es la parte `reduce`.
+
+# Aplicación a la Revista Secuencia
+
+## Generar una lista de direcciones a cada número de la revista
+
+En el caso de la Secuencia la [dirección]("http://secuencia.mora.edu.mx/index.php/Secuencia/issue/archive") contiene el archivo de la revista. En esta página hay en enlaces a cada número. Visitando esos enlaces encontramos, a su vez, los enlaces para cada artículo y allí encontraremos, finalmente, los resúmenes. 
+
+El proceso en general no es muy distinto al que usamos para encontrar dentro de la estructura de la página a los resumes y que vimos en la entrada 1 de web scraping. Utilizamos el modo desarrollar del navegador para dar con las etiquetas y atributos de los enlaces. En este caso encontramos los enlaces a cada número son un título de nivel 4 `h4`, con la etiqueta `a` del que queremos el atributo `href`, que es el nombre interno que tienen los enlaces. 
+
+![](images/inspector_web_secuencia_archivo.png){width = 50%}
+
+```{r warning=FALSE}
+library(rvest)
+library(stringr)
+library(knitr)
+library(purrr) # Para iterar sobre listas
+
+# Hay dos páginas con el índice de la revista.
+# Obtego los enlaces por separado y luego los uno. 
+
+numeros_secuencia1 <- read_html("http://secuencia.mora.edu.mx/index.php/Secuencia/issue/archive") %>%
+  html_nodes("h4") %>% 
+  html_nodes("a") %>% 
+  html_attr("href")  
+
+numeros_secuencia2 <- read_html("http://secuencia.mora.edu.mx/index.php/Secuencia/issue/archive?issuesPage=2#issues") %>%
+  html_nodes("h4") %>% 
+  html_nodes("a") %>% 
+  html_attr("href")
+
+numeros_secuencia <- c(numeros_secuencia1, numeros_secuencia2)
+
+kable(head(numeros_secuencia))
+```
+
+## Generar una lista con las direcciones de cada artículo
+
+Con las direcciones de cada número de la revista podemos pasar al suguiente paso: crear la lista con las URL de cada artículo. Para eso creamos una función que lea cada número de revista y recolecte los enlaces de cada artículo. La llamaremos `listar_enlaces` y le daremos como input la lista de números de revistas. La estructura de datos final de esta etapa será un data.frame con dos columnas, uno con la dirección del artículo y otro con el número de la revista a la que pertenece. 
+
+```{r warning=FALSE}
+listar_enlaces <- function(x) { 
+  pagina_cruda <- read_html(x)
+html_nodes(pagina_cruda, "div.tocTitle") %>% 
+  html_nodes("a") %>% 
+  html_attr("href") -> enlaces
+html_node(pagina_cruda, "h2") %>% html_text() -> numero
+as.data.frame(cbind(enlaces, numero))}
+
+# Test: 
+
+listar_enlaces("http://secuencia.mora.edu.mx/index.php/Secuencia/issue/view/112") 
+```
+
+Luego iteramos esa función a lo largo de la lista con los URL de los números de revista. Al resultado lo llamaremos `enlaces` y el que usaremos para obtener, en su momento los resúmenes. En esta parte vamos a aplicar el enfoque `map-reduce` con la función `map_df()` de la librería `purrr`. Esta función aplica una función a una lista (en este caso la función `listar_enlaces()` a la lista `numeros_secuencia`) y nos regresa el resultado "reducido" a un data.frame. 
+
+```{r warning=FALSE}
+# Aquí aplicamos la función que preparamos y testeamos en el bloque anterior.
+enlaces <- map_df(numeros_secuencia, listar_enlaces)
+```
+
+## Leer los resúmenes y organizarlos como un data.frame
+
+Este es el último paso, que producirá la estructura de datos que estamos buscando. Para eso, una vez más creamos una función personalizada llamada `leer_resumenes()` que accede a cada artículo y captura el título del artículo, texto del resumen, autores y los datos del número en que se publicó. Para cada una de estas columnas extraemos la información relevante con cadenas de `html_node()`.
+
+```{r warning=FALSE}
+
+# Leer los resúmenes. 
+
+leer_resumenes <- function (x) {
+  print(x)
+  pagina_cruda = read_html(x)
+  html_nodes (pagina_cruda, 'div#articleTitle') %>% 
+    html_text() -> titulo
+  html_nodes(pagina_cruda, 'div#authorString') %>% 
+    html_text() -> autores
+  html_nodes(pagina_cruda, 'div#articleAbstract') %>%
+    .[1] %>% 
+    html_text() %>%
+    str_remove_all("\\r") %>%
+    str_remove_all('\\t') %>% 
+    str_replace_all("\\n", " ") %>% 
+    str_remove_all('\\- ') -> resumen
+html_nodes (pagina_cruda, 'div#breadcrumb') %>% 
+    html_nodes('a') %>% 
+    .[2] %>% 
+    html_text() -> numero  
+    data.frame(autores, titulo, resumen, numero)
+}
+
+# Test con algunos enlaces
+
+map_df(enlaces[100:102,1], leer_resumenes) -> resumenes
+
+# Para extraer todos los enlaces: 
+# map_df(enlaces$enlace, leer_resumenes) -> resumenes
+# Para guardar los resultados: 
+# write_csv(resumenes, "./resumenes_secuencia.csv")
+
+kable(resumenes)
+```
+
+Para no abusar del servicio que nos da la Revista Secuencia es recomendable que, una vez que hemos recoletado toda la información, la guardemos en un archivo .csv. De este modo la tendremos disponible para el análisis posterior, sin tener que esperar que la descarga y sin saturar el servicio. 
+
+En una entrega siguiente comenzaremos a analizar estos resúmenes usando procesamiento de lenguaje natural. 
