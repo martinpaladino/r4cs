@@ -1,0 +1,248 @@
+---
+title: 'Datos anchos, datos largos: transformación de datos para gráficos'
+author: Martín Paladino
+date: '2018-10-03'
+slug: datos-anchos-datos-largos-transformación-de-datos-para-gráficos
+categories:
+  - blog
+  - R
+tags:
+  - tidyverse
+  - gather
+  - gráficos
+isCJKLanguage: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+
+# Datos prolijos
+
+Formato ancho y formato largo
+
+En el mundillo de R se suele recomendar usar los datos *tidy* o prolijos. No se trata, claro, de los datos en sí mismos: se trata la forma que tienen los datos. Siguiendo --de lejos- a [Whickham 2014](http://vita.had.co.nz/papers/tidy-data.pdf) los *tidy data* dos propiedades: 
+
+1. Son rectangulares. Es decir, todas la columnas tienen el mismo largo y todas las filas tienen el mismo largo^[Aunque esto no significa que filas y columnas tienen el mismo, en ese caso serían datos cuadrados. Todos los datos cuadrados son rectangulares pero no todos los datos rectangulares son cuadrados.]. Si hay valores faltantes se rellenan, generalmente con `NA`. 
+
+2. Cada columna es una (y solo una) variable y cada fila una observación.
+
+A manera de ejemplo, los datos de la base de la Encuesta Nacional de Migración tienen este formato. Se incluye el código para generar esos datos, que se descargan directamente del servidor de la UNAM en el que están alojados. 
+
+```{r}
+library(foreign)
+library(tidyverse)
+library(knitr)
+library(hrbrthemes)
+
+# R permite camino hacia los datos como URL, es decir, podemos leer directamente un archivo desde una dirección a través de http.
+# Sin embargo es recomendable crear una copia local de los datos 1) por velocidad y 2) para no abusar del servidor que nos ofrece los datos, 3) por si los datos desaparecen o cambian de ubicación.
+
+migracion <- read.spss("http://www.losmexicanos.unam.mx/migracion/encuesta_nacional/base_datos/Encuesta_Nacional_de_Migracion.sav", to.data.frame = TRUE)
+diccionario <- tibble(nombre = names(migracion), 
+                    etiquetas = str_trim(attr(migracion, "variable.labels")))
+migracion <- as.tibble(migracion)
+migracion %>% 
+  sample_n(3) %>% 
+  select(edo, starts_with("p7_"), Pondi2) %>% 
+  kable(caption = "Cada columna es una variable, cada fila una observación.")
+``` 
+
+En principio no es muy prolijo, los nombres de columnas no son muy claros, los estados están codificados numéricamente y vaya a saber que es Pondi2. Sin embargo se cumplen las reglas mencionadas. 
+
+# Formato ancho, formato largo
+
+Usar siempre el mismo formato para los datos nos ayuda a tener expectativas sobre cómo van a comportarse cuando los procesemos para analizarlos, además nos permite reutilizar código sin muchas modificaciones. Sin embargo para algunas operaciones es más práctico dar a los datos un tipo de diferente de formato: pares^[O ternas, cuartetos, etc.] de claves y valores. El formato básico de claves y valores tiene dos columnas --y sólo dos columnas, independientemente de la cantidad de variables con la que estemos tratando. Una columna registra las claves, en este caso los nombres de cada variable. La otra registra el valor para esa variable. En este contexto usamos de manera intercambiable "pares de clave-valor" y "formato largo". 
+
+```{r}
+migracion %>% 
+  sample_n(3) %>% 
+  select(edo, starts_with("p7_"), Pondi2) %>% 
+  gather() %>% 
+  kable(caption = "Los nombre de columna ahora están en filas.")
+```
+
+Los datos son **exactamente los mismos** y podemos revertir el proceso, regresando los datos al formato original. Lo que hicimos fue pasar de unos datos en formato ancho --muchas columnas, pocas filas- a uno largo --pocas columnas, muchas filas, la información de los nombres de columa ahora pasó a una fila. Como se ve en el código, lo hicimos con la función `gather()`, del paquete `tidyr` que se encuentra a su vez en el metapaquete `tidyverse`. 
+
+# ¿Para qué usar formato largo?
+
+El formato largo es muy útil en varios escenarios en los que necesitamos hacer explícita la información sobre los niveles de agrupamiento de nuestros datos. Al convertirlos al formato largo lo que antes eran columnas ahora serán grupos y, aquí la gran ventaja, podemos tener más de un grupo activo. 
+
+En la práctica transformamos nuestros datos a formato largo para aplicar operaciones agrupadas con `group_by` a través de `mutate()` o `summarise()` o para gráficos de `ggplot`. En este último caso nos permite usar las propiedades de agrupación de los datos con `facet_wrap()`, `fill()` o `color`. Las funciones que mencionamos aprovechan muy bien a los datos largos, ya que podemos utilizar a la/s columna/s  de clave/s  para crear grupos y aplicar funciones sobre esos grupos, sin necesidad de iterar sobre listas o data frames y pudiendo aprovechar más de un nivel de agrupamiento. 
+
+# Aplicación a un gráfico exploratorio con múltiples variables
+
+En el caso de los gráficos el formato largo simplifica graficar más de una variable, es decir, algunas o todas la columnas de un data frame.  En lugar de graficar cada columna por separado las unimos en una sola columna alargándolas y las graficamos a todas de una vez, separando a los grupos por las claves. En este ejemplo en lugar de generar una par de claves y valores vamos a necesitar una terna de claves y valores: como estamos trabajando con datos ponderados es necesario convervar los ponderadores cuando hacemos la transformación a formato largo. 
+
+## Formato original de los datos
+
+En el formato original de la [base de datos](http://www.losmexicanos.unam.mx/migracion/encuesta_nacional.html) encontramos que estos son prolijos: cada fila una observación, cada columna una variable. En este caso cada fila es una persona encuestada, cada columna una pregunta y cada intersección de fila/columna la respuesta de una persona encuestada a una pregunta. Vamos a trabajar con el bloque `p7` de la encuesta, un conjunto de 10 preguntas que miden indirectamente actitudes sobre tolerancia.
+
+```{r}
+migracion %>% 
+  head() %>% 
+  select(starts_with("p7_"), Pondi2) %>% 
+  kable()
+```
+
+Si graficar los conteos de respuestas a cada una de las 10 preguntas podríamos hacer 10 gráficos, pero es mejor hacerlo en uno solo. Para lograrlo necesitamos dar a nuestros datos una forma ad hoc. En esta forma nuestros datos tendrán columnas: una para las preguntas, otra para las respuestas y una tercera para el ponderador muestral. De este modo podemos posteriormente agrupar por preguntas y respuestas y generar todos los conteos de manera prolija, obteniendo el resultado en un data.frame listo para pasar a `ggplot`.  
+
+# Formato largo: toma 1.
+
+La primera aproximación es aplicar la función `gather()` con los argumentos por defecto^[Para conocer los argumentos por defecto de `gather` use `help(gather)`.] y ver que pasa. Reduciré el número de preguntas para que el resultado sea más facil de visualizar y comprender.
+
+```{r}
+migracion %>% 
+  head %>%                         #La cabeza, sólo las primeras filas
+  select(p7_1, p7_2, Pondi2) %>%  
+  gather() %>% 
+  kable(caption = "El ponderador no va ahí...")
+```
+
+¿Lo logramos? `Sí, en parte`. Las preguntas ahora están en la columna `key`^[clave, es el nombre en inglés que por defecto utiliza `gather`) y las respuestas en `value`^[Valor, ibid.]. Sin embargo el ponderador también está en filas a aparte. Para poder aplicarlo a momento de hacer los conteos necesitamos que el ponderador sea una columna separada, aparte de `key` y `value`, que repita su magnitud para cada par de pregunta/respuesta. Necesitamos un trío de claves y valores. `gather` contempla esta situación y tiene un operador muy simple para indicarle que no queremos que una variable se convierta en pares de clave-valor y se conserve en la estructura original, repitíendose para da grupo. El operador es el signo menos `-`, que antecede el nombre de columna o columnas para las que queremos este comportamiento. 
+
+Por defecto `gather` utiliza los nombres `key` y `value` para las columnas de claves y valor. Sin embargo es buena idea no usar estos nombres genéricos no son muy útiles --podrían ser cualquier cosa- y es buena práctica usar nombres significativos, relacionados con nuestros datos. En este caso podrías llamar a esas columnas `Pregunta` y `Respuesta`, ya que contienen preguntas y respuestas. 
+
+> Cuando queremos excluir una columna de la transformación a formato largo es **necesario** suministrar nombres para las columnas de claves y valores. El operador `-` **no funciona** si no suministramos los nombres. Los nombres de clave y valor son los dos primeros argumentos de la función, las variables excluidas con `-` son los argumentos sucesivos. 
+
+# Formato largo: toma 2.
+
+```{r}
+migracion %>% 
+  head %>% 
+  select(p7_1, p7_2, Pondi2) %>%  
+  gather(Pregunta, Respuesta, -Pondi2) %>% 
+  kable(caption = "El ponderador en columna aparte.")
+```
+
+# Conteos agrupados y ponderados
+
+Con la estructura de datos correcta podemos hacer los conteos de las respuestas a cada pregunta aplicando el ponderador muestal. Seguimos con el ejemplo con pocas columnas para facilitar la lectura de las salidas, pero podemos escalar este procedimiento a tantas columnas como querramos, la disponibilidad de memoria RAM es el límite.
+
+Pasos: 
+
+1. Aplicamos los agrupamientos a los datos transformados. En este caso queremos un grupo para cada combinación de pregunta/respuesta.
+2. Aplicamos el conteo indicando a `Pondi2` como `wt=` o ponderador.
+3. Asignamos un nombre al data.frame con los conteos. No es estrictamente necesario, pero en este caso corta el código y hace más legible la sintaxis posterior. 
+
+```{r}
+migracion %>% 
+  select(p7_1, p7_2, Pondi2) %>%  
+  gather(Pregunta, Respuesta, -Pondi2) %>% 
+  group_by(Pregunta, Respuesta) %>% 
+  count(wt = Pondi2) -> conteos_p7
+kable(conteos_p7, caption = "Conteos finales, casi listos para graficar")
+```
+
+# Etiquetas de las variables
+
+## Utilizar nombres largos de variable
+
+El código del primer bloque no solo carga los datos, también genera --a partir de los atributos de la base de datos- un diccionario de variables con la siguiente estructura: 
+
+```{r}
+diccionario %>% 
+  filter(str_detect(nombre, "p7_")) %>% 
+  kable(caption = "Relación de nombres cortos y largos del bloque p7.")
+```
+
+En el `diccionario` están las etiquetas largas de las variables: las preguntas a las que corresonden. Sería buena idea agregarlos a nuestros conteos, así el gráfico será más comprensible para quienes no están familirizados con esta base de datos. 
+
+Aquí tenemos otra característica interesante de los datos en formato largo: están listos para hacer joins. A través de un join  podemos reemplazar facilmente los códigos de las preguntas (p\*_\*) por los nombres largos, mucho más significativos para quién nos lea.
+
+Pasos: 
+
+1. Cambiar el nombre de la columna `Pregunta` de `conteos_p7` a `nombre`, de modo que coincida con la variable con igual información en `diccionario`. 
+2. Hacer un `left_join`, de modo que se conserven solamente las filas de la izquierda, es decir, de `conteos_p7`. 
+
+```{r}
+conteos_p7 %>% 
+  rename("nombre" = Pregunta) %>% 
+  kable(caption = "Al cambiar el nombre aquí no necesito especificar claves de unión en el join")
+
+conteos_p7 %>% 
+  rename("nombre" = Pregunta) %>% 
+  left_join(diccionario) %>% 
+  kable(caption = "La columna etiqueta tiene los nombres largos que usaré para graficar")
+```
+
+## Preparar las etiquetas largas para el gráfico
+
+Los nombres largos de las variables --las preguntas tal como fueron formuladas- son muy informativas. Quizás demasiado. En el gráfico van a superponerse y van a ser difíciles de leer.
+
+### Aproximación 1: eliminar el texto repetido. 
+
+Como la primera parte de la pregunta se repite una aproximación a este problema es eliminarla y mencionarla una vez para todo el gráfico, conservando solamente la parte que cambia. 
+
+> **Advertencia** vamos a usar expresiones regulares. La RegEx no se entienden, se usan.
+
+Pasos:
+
+1. Usando `mutate` aplicamos la función `str_remove()`, que elimina la cadena de caracteres (patrón o pattern en `help(str_remove)`) de la columna. En este caso vamos a eliminar la cadena "7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de "
+2. Algunos símbolos (`?*.^|&` entre otros, están reservados por las expresiones regulares y es necesario "escaparlos". Un caracter se escapa usando la barra invertida \\. Como la barra invertida es a su vez un caracter reservado por R tenemos que escaparlo, así que utilizamos la doble barra invertida \\\\. Como markdown reserva las barras invertidas para que en este documento salgan 2 tuve que escribir 4. Y así hasta que se torna [peligroso](https://www.xkcd.com/1638/) 
+
+```{r}
+conteos_p7 %>% 
+  rename("nombre" = Pregunta) %>% 
+  left_join(diccionario) %>%         #Hasta acá repito lo que hice en el bloque anterior.
+  mutate(etiquetas = str_remove(etiquetas, "7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de ")) %>% 
+  kable(caption = "Más legible")
+```
+
+### Aproximación 2: agregar saltos de línea. 
+
+Pasos: 
+
+1. Usando `mutate()` aplicamos la función `str_wrap()`, que agrega saltos de líneas cada determinado número caracteres respetando los límites de palabra. De ese modo en lugar de tener una línea muy larga tenemos varias líneas cortas. La expresión literal de una salto de línea en R es `\\n`, una barra invertida antes de una `n` minúscula. 
+- A `str_wrap` se le puede indicar el ancho aproximado para los saltos de línea: cuanto más pequeño el ancho más frecuentes los saltos de línea. 
+
+```{r}
+conteos_p7 %>% 
+  rename("nombre" = Pregunta) %>% 
+  left_join(diccionario) %>%         #Hasta acá repito lo que hice en el bloque anterior.
+  mutate(etiquetas = str_wrap(etiquetas, 20)) 
+```
+
+# Gráfico
+
+Ya tenemos todo preparado para hacer el gráfico. 
+
+1. Los conteos agrupados y ponderados. 
+2. Los nombre de etiqueta larga propiamente formateados para que hacerlos legibles.
+
+Pasos: 
+
+1. Ubicar la etiqueta de cada pregunta en el eje x y los conteos de respuestas en el eje y. 
+2. Utilizar el argumento `fill =` de `ggplot` para que cada respuesta tenga un color de relleno^[El argumento `color =` controla el color del contorno, no del relleno.] igual
+3. Especificar `position = "dodge"`^[Sí, yo también detesto esa sintaxis con comillas, pero es lo que hay] a `geom_bar` para barras lado a lado. Por defecto `position = "stack"` y se generan barras apiladas. 
+4. Ubicar en el subtítulo del gráfico la parte repetida de la pregunta. 
+
+```{r fig.height=8, fig.width=10}
+migracion %>% 
+  select(starts_with("p7_"), Pondi2) %>%  
+  gather(Pregunta, Respuesta, -Pondi2) %>% 
+  group_by(Pregunta, Respuesta) %>% 
+  count(wt = Pondi2) %>% 
+  rename("nombre" = Pregunta) %>% 
+  left_join(diccionario) %>%
+  mutate(etiquetas = str_remove(etiquetas, 
+                                "7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas "), 
+         etiquetas = str_wrap(etiquetas, 15)) %>% 
+  ungroup ()%>% 
+  mutate(Respuesta = factor(Respuesta, levels = c("Sí", "Sí, en parte", "No", "NS", "NC"))) -> 
+           conteos_p7_etiquetados
+
+conteos_p7_etiquetados %>% 
+  ggplot(aes(x = etiquetas, y = n, fill = Respuesta)) + 
+    geom_col(position = "dodge") + 
+    labs(title = "Actitudes de tolerancia en México", 
+       subtitle = "¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas...",
+       caption = "Elaboración propia\nDatos Encuesta Nacional de Migración", 
+       x = NULL, 
+       y = NULL) + 
+    scale_y_continuous(labels = scales::comma) + 
+    theme_ipsum_rc() 
+```
+
+[Descargar la versión para impresión de este gráfico.](/images/tolerancia.pdf)

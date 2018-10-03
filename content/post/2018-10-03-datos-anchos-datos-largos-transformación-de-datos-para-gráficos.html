@@ -1,0 +1,1026 @@
+---
+title: 'Datos anchos, datos largos: transformación de datos para gráficos'
+author: Martín Paladino
+date: '2018-10-03'
+slug: datos-anchos-datos-largos-transformación-de-datos-para-gráficos
+categories:
+  - blog
+  - R
+tags:
+  - tidyverse
+  - gather
+  - gráficos
+isCJKLanguage: no
+---
+
+
+
+<div id="datos-prolijos" class="section level1">
+<h1>Datos prolijos</h1>
+<p>Formato ancho y formato largo</p>
+<p>En el mundillo de R se suele recomendar usar los datos <em>tidy</em> o prolijos. No se trata, claro, de los datos en sí mismos: se trata la forma que tienen los datos. Siguiendo –de lejos- a <a href="http://vita.had.co.nz/papers/tidy-data.pdf">Whickham 2014</a> los <em>tidy data</em> dos propiedades:</p>
+<ol style="list-style-type: decimal">
+<li><p>Son rectangulares. Es decir, todas la columnas tienen el mismo largo y todas las filas tienen el mismo largo<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>. Si hay valores faltantes se rellenan, generalmente con <code>NA</code>.</p></li>
+<li><p>Cada columna es una (y solo una) variable y cada fila una observación.</p></li>
+</ol>
+<p>A manera de ejemplo, los datos de la base de la Encuesta Nacional de Migración tienen este formato. Se incluye el código para generar esos datos, que se descargan directamente del servidor de la UNAM en el que están alojados.</p>
+<pre class="r"><code>library(foreign)
+library(tidyverse)
+library(knitr)
+library(hrbrthemes)
+
+# R permite camino hacia los datos como URL, es decir, podemos leer directamente un archivo desde una dirección a través de http.
+# Sin embargo es recomendable crear una copia local de los datos 1) por velocidad y 2) para no abusar del servidor que nos ofrece los datos, 3) por si los datos desaparecen o cambian de ubicación.
+
+migracion &lt;- read.spss(&quot;http://www.losmexicanos.unam.mx/migracion/encuesta_nacional/base_datos/Encuesta_Nacional_de_Migracion.sav&quot;, to.data.frame = TRUE)
+diccionario &lt;- tibble(nombre = names(migracion), 
+                    etiquetas = str_trim(attr(migracion, &quot;variable.labels&quot;)))
+migracion &lt;- as.tibble(migracion)
+migracion %&gt;% 
+  sample_n(3) %&gt;% 
+  select(edo, starts_with(&quot;p7_&quot;), Pondi2) %&gt;% 
+  kable(caption = &quot;Cada columna es una variable, cada fila una observación.&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-1">Table 1: </span>Cada columna es una variable, cada fila una observación.</caption>
+<thead>
+<tr class="header">
+<th align="right">edo</th>
+<th align="left">p7_1</th>
+<th align="left">p7_2</th>
+<th align="left">p7_3</th>
+<th align="left">p7_4</th>
+<th align="left">p7_5</th>
+<th align="left">p7_6</th>
+<th align="left">p7_7</th>
+<th align="left">p7_8</th>
+<th align="left">p7_9</th>
+<th align="left">p7_10</th>
+<th align="right">Pondi2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">8</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">No</td>
+<td align="left">Sí</td>
+<td align="left">No</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">No</td>
+<td align="right">33489</td>
+</tr>
+<tr class="even">
+<td align="right">15</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="right">12490</td>
+</tr>
+<tr class="odd">
+<td align="right">26</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí, en parte</td>
+<td align="right">56133</td>
+</tr>
+</tbody>
+</table>
+<p>En principio no es muy prolijo, los nombres de columnas no son muy claros, los estados están codificados numéricamente y vaya a saber que es Pondi2. Sin embargo se cumplen las reglas mencionadas.</p>
+</div>
+<div id="formato-ancho-formato-largo" class="section level1">
+<h1>Formato ancho, formato largo</h1>
+<p>Usar siempre el mismo formato para los datos nos ayuda a tener expectativas sobre cómo van a comportarse cuando los procesemos para analizarlos, además nos permite reutilizar código sin muchas modificaciones. Sin embargo para algunas operaciones es más práctico dar a los datos un tipo de diferente de formato: pares<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> de claves y valores. El formato básico de claves y valores tiene dos columnas –y sólo dos columnas, independientemente de la cantidad de variables con la que estemos tratando. Una columna registra las claves, en este caso los nombres de cada variable. La otra registra el valor para esa variable. En este contexto usamos de manera intercambiable “pares de clave-valor” y “formato largo”.</p>
+<pre class="r"><code>migracion %&gt;% 
+  sample_n(3) %&gt;% 
+  select(edo, starts_with(&quot;p7_&quot;), Pondi2) %&gt;% 
+  gather() %&gt;% 
+  kable(caption = &quot;Los nombre de columna ahora están en filas.&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-2">Table 2: </span>Los nombre de columna ahora están en filas.</caption>
+<thead>
+<tr class="header">
+<th align="left">key</th>
+<th align="left">value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">edo</td>
+<td align="left">32</td>
+</tr>
+<tr class="even">
+<td align="left">edo</td>
+<td align="left">23</td>
+</tr>
+<tr class="odd">
+<td align="left">edo</td>
+<td align="left">22</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="even">
+<td align="left">p7_3</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_3</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_3</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_4</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">p7_4</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_4</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">p7_5</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_5</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_5</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_6</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">p7_6</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_6</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="even">
+<td align="left">p7_7</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_7</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_7</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_8</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">p7_8</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_8</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="even">
+<td align="left">p7_9</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_9</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_9</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_10</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">p7_10</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_10</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">Pondi2</td>
+<td align="left">202455</td>
+</tr>
+<tr class="odd">
+<td align="left">Pondi2</td>
+<td align="left">15390</td>
+</tr>
+<tr class="even">
+<td align="left">Pondi2</td>
+<td align="left">57234</td>
+</tr>
+</tbody>
+</table>
+<p>Los datos son <strong>exactamente los mismos</strong> y podemos revertir el proceso, regresando los datos al formato original. Lo que hicimos fue pasar de unos datos en formato ancho –muchas columnas, pocas filas- a uno largo –pocas columnas, muchas filas, la información de los nombres de columa ahora pasó a una fila. Como se ve en el código, lo hicimos con la función <code>gather()</code>, del paquete <code>tidyr</code> que se encuentra a su vez en el metapaquete <code>tidyverse</code>.</p>
+</div>
+<div id="para-que-usar-formato-largo" class="section level1">
+<h1>¿Para qué usar formato largo?</h1>
+<p>El formato largo es muy útil en varios escenarios en los que necesitamos hacer explícita la información sobre los niveles de agrupamiento de nuestros datos. Al convertirlos al formato largo lo que antes eran columnas ahora serán grupos y, aquí la gran ventaja, podemos tener más de un grupo activo.</p>
+<p>En la práctica transformamos nuestros datos a formato largo para aplicar operaciones agrupadas con <code>group_by</code> a través de <code>mutate()</code> o <code>summarise()</code> o para gráficos de <code>ggplot</code>. En este último caso nos permite usar las propiedades de agrupación de los datos con <code>facet_wrap()</code>, <code>fill()</code> o <code>color</code>. Las funciones que mencionamos aprovechan muy bien a los datos largos, ya que podemos utilizar a la/s columna/s de clave/s para crear grupos y aplicar funciones sobre esos grupos, sin necesidad de iterar sobre listas o data frames y pudiendo aprovechar más de un nivel de agrupamiento.</p>
+</div>
+<div id="aplicacion-a-un-grafico-exploratorio-con-multiples-variables" class="section level1">
+<h1>Aplicación a un gráfico exploratorio con múltiples variables</h1>
+<p>En el caso de los gráficos el formato largo simplifica graficar más de una variable, es decir, algunas o todas la columnas de un data frame. En lugar de graficar cada columna por separado las unimos en una sola columna alargándolas y las graficamos a todas de una vez, separando a los grupos por las claves. En este ejemplo en lugar de generar una par de claves y valores vamos a necesitar una terna de claves y valores: como estamos trabajando con datos ponderados es necesario convervar los ponderadores cuando hacemos la transformación a formato largo.</p>
+<div id="formato-original-de-los-datos" class="section level2">
+<h2>Formato original de los datos</h2>
+<p>En el formato original de la <a href="http://www.losmexicanos.unam.mx/migracion/encuesta_nacional.html">base de datos</a> encontramos que estos son prolijos: cada fila una observación, cada columna una variable. En este caso cada fila es una persona encuestada, cada columna una pregunta y cada intersección de fila/columna la respuesta de una persona encuestada a una pregunta. Vamos a trabajar con el bloque <code>p7</code> de la encuesta, un conjunto de 10 preguntas que miden indirectamente actitudes sobre tolerancia.</p>
+<pre class="r"><code>migracion %&gt;% 
+  head() %&gt;% 
+  select(starts_with(&quot;p7_&quot;), Pondi2) %&gt;% 
+  kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">p7_1</th>
+<th align="left">p7_2</th>
+<th align="left">p7_3</th>
+<th align="left">p7_4</th>
+<th align="left">p7_5</th>
+<th align="left">p7_6</th>
+<th align="left">p7_7</th>
+<th align="left">p7_8</th>
+<th align="left">p7_9</th>
+<th align="left">p7_10</th>
+<th align="right">Pondi2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="right">58676</td>
+</tr>
+<tr class="even">
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="left">NS</td>
+<td align="right">11725</td>
+</tr>
+<tr class="odd">
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">NS</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">Sí</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="left">No</td>
+<td align="right">34727</td>
+</tr>
+<tr class="even">
+<td align="left">Sí, en parte</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="right">56490</td>
+</tr>
+<tr class="odd">
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí, en parte</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="right">113882</td>
+</tr>
+<tr class="even">
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="left">Sí</td>
+<td align="right">58275</td>
+</tr>
+</tbody>
+</table>
+<p>Si graficar los conteos de respuestas a cada una de las 10 preguntas podríamos hacer 10 gráficos, pero es mejor hacerlo en uno solo. Para lograrlo necesitamos dar a nuestros datos una forma ad hoc. En esta forma nuestros datos tendrán columnas: una para las preguntas, otra para las respuestas y una tercera para el ponderador muestral. De este modo podemos posteriormente agrupar por preguntas y respuestas y generar todos los conteos de manera prolija, obteniendo el resultado en un data.frame listo para pasar a <code>ggplot</code>.</p>
+</div>
+</div>
+<div id="formato-largo-toma-1." class="section level1">
+<h1>Formato largo: toma 1.</h1>
+<p>La primera aproximación es aplicar la función <code>gather()</code> con los argumentos por defecto<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> y ver que pasa. Reduciré el número de preguntas para que el resultado sea más facil de visualizar y comprender.</p>
+<pre class="r"><code>migracion %&gt;% 
+  head %&gt;%                         #La cabeza, sólo las primeras filas
+  select(p7_1, p7_2, Pondi2) %&gt;%  
+  gather() %&gt;% 
+  kable(caption = &quot;El ponderador no va ahí...&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-4">Table 3: </span>El ponderador no va ahí…</caption>
+<thead>
+<tr class="header">
+<th align="left">key</th>
+<th align="left">value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">NS</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NS</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="left">Pondi2</td>
+<td align="left">58676</td>
+</tr>
+<tr class="even">
+<td align="left">Pondi2</td>
+<td align="left">11725</td>
+</tr>
+<tr class="odd">
+<td align="left">Pondi2</td>
+<td align="left">34727</td>
+</tr>
+<tr class="even">
+<td align="left">Pondi2</td>
+<td align="left">56490</td>
+</tr>
+<tr class="odd">
+<td align="left">Pondi2</td>
+<td align="left">113882</td>
+</tr>
+<tr class="even">
+<td align="left">Pondi2</td>
+<td align="left">58275</td>
+</tr>
+</tbody>
+</table>
+<p>¿Lo logramos? <code>Sí, en parte</code>. Las preguntas ahora están en la columna <code>key</code>^[clave, es el nombre en inglés que por defecto utiliza <code>gather</code>) y las respuestas en <code>value</code><a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a>. Sin embargo el ponderador también está en filas a aparte. Para poder aplicarlo a momento de hacer los conteos necesitamos que el ponderador sea una columna separada, aparte de <code>key</code> y <code>value</code>, que repita su magnitud para cada par de pregunta/respuesta. Necesitamos un trío de claves y valores. <code>gather</code> contempla esta situación y tiene un operador muy simple para indicarle que no queremos que una variable se convierta en pares de clave-valor y se conserve en la estructura original, repitíendose para da grupo. El operador es el signo menos <code>-</code>, que antecede el nombre de columna o columnas para las que queremos este comportamiento.</p>
+<p>Por defecto <code>gather</code> utiliza los nombres <code>key</code> y <code>value</code> para las columnas de claves y valor. Sin embargo es buena idea no usar estos nombres genéricos no son muy útiles –podrían ser cualquier cosa- y es buena práctica usar nombres significativos, relacionados con nuestros datos. En este caso podrías llamar a esas columnas <code>Pregunta</code> y <code>Respuesta</code>, ya que contienen preguntas y respuestas.</p>
+<blockquote>
+<p>Cuando queremos excluir una columna de la transformación a formato largo es <strong>necesario</strong> suministrar nombres para las columnas de claves y valores. El operador <code>-</code> <strong>no funciona</strong> si no suministramos los nombres. Los nombres de clave y valor son los dos primeros argumentos de la función, las variables excluidas con <code>-</code> son los argumentos sucesivos.</p>
+</blockquote>
+</div>
+<div id="formato-largo-toma-2." class="section level1">
+<h1>Formato largo: toma 2.</h1>
+<pre class="r"><code>migracion %&gt;% 
+  head %&gt;% 
+  select(p7_1, p7_2, Pondi2) %&gt;%  
+  gather(Pregunta, Respuesta, -Pondi2) %&gt;% 
+  kable(caption = &quot;El ponderador en columna aparte.&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-5">Table 4: </span>El ponderador en columna aparte.</caption>
+<thead>
+<tr class="header">
+<th align="right">Pondi2</th>
+<th align="left">Pregunta</th>
+<th align="left">Respuesta</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">58676</td>
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="right">11725</td>
+<td align="left">p7_1</td>
+<td align="left">NS</td>
+</tr>
+<tr class="odd">
+<td align="right">34727</td>
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="right">56490</td>
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+</tr>
+<tr class="odd">
+<td align="right">113882</td>
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="right">58275</td>
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="right">58676</td>
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="right">11725</td>
+<td align="left">p7_2</td>
+<td align="left">NS</td>
+</tr>
+<tr class="odd">
+<td align="right">34727</td>
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="right">56490</td>
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="odd">
+<td align="right">113882</td>
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+<tr class="even">
+<td align="right">58275</td>
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="conteos-agrupados-y-ponderados" class="section level1">
+<h1>Conteos agrupados y ponderados</h1>
+<p>Con la estructura de datos correcta podemos hacer los conteos de las respuestas a cada pregunta aplicando el ponderador muestal. Seguimos con el ejemplo con pocas columnas para facilitar la lectura de las salidas, pero podemos escalar este procedimiento a tantas columnas como querramos, la disponibilidad de memoria RAM es el límite.</p>
+<p>Pasos:</p>
+<ol style="list-style-type: decimal">
+<li>Aplicamos los agrupamientos a los datos transformados. En este caso queremos un grupo para cada combinación de pregunta/respuesta.</li>
+<li>Aplicamos el conteo indicando a <code>Pondi2</code> como <code>wt=</code> o ponderador.</li>
+<li>Asignamos un nombre al data.frame con los conteos. No es estrictamente necesario, pero en este caso corta el código y hace más legible la sintaxis posterior.</li>
+</ol>
+<pre class="r"><code>migracion %&gt;% 
+  select(p7_1, p7_2, Pondi2) %&gt;%  
+  gather(Pregunta, Respuesta, -Pondi2) %&gt;% 
+  group_by(Pregunta, Respuesta) %&gt;% 
+  count(wt = Pondi2) -&gt; conteos_p7
+kable(conteos_p7, caption = &quot;Conteos finales, casi listos para graficar&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-6">Table 5: </span>Conteos finales, casi listos para graficar</caption>
+<thead>
+<tr class="header">
+<th align="left">Pregunta</th>
+<th align="left">Respuesta</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NC</td>
+<td align="right">715096</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">No</td>
+<td align="right">13580012</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NS</td>
+<td align="right">2021106</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+<td align="right">43552653</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+<td align="right">19951882</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NC</td>
+<td align="right">835828</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">No</td>
+<td align="right">11550564</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NS</td>
+<td align="right">2964105</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+<td align="right">42893890</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí, en parte</td>
+<td align="right">21576362</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="etiquetas-de-las-variables" class="section level1">
+<h1>Etiquetas de las variables</h1>
+<div id="utilizar-nombres-largos-de-variable" class="section level2">
+<h2>Utilizar nombres largos de variable</h2>
+<p>El código del primer bloque no solo carga los datos, también genera –a partir de los atributos de la base de datos- un diccionario de variables con la siguiente estructura:</p>
+<pre class="r"><code>diccionario %&gt;% 
+  filter(str_detect(nombre, &quot;p7_&quot;)) %&gt;% 
+  kable(caption = &quot;Relación de nombres cortos y largos del bloque p7.&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-7">Table 6: </span>Relación de nombres cortos y largos del bloque p7.</caption>
+<thead>
+<tr class="header">
+<th align="left">nombre</th>
+<th align="left">etiquetas</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_3</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas indígenas?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_4</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas gais?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_5</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas con ideas políticas distintas a las suyas?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_6</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas enfermas de sida?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_7</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas personas con alguna discapacidad?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_8</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otro país (extranjeras)?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_9</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas con una cultura distinta?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_10</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas lesbianas?</td>
+</tr>
+</tbody>
+</table>
+<p>En el <code>diccionario</code> están las etiquetas largas de las variables: las preguntas a las que corresonden. Sería buena idea agregarlos a nuestros conteos, así el gráfico será más comprensible para quienes no están familirizados con esta base de datos.</p>
+<p>Aquí tenemos otra característica interesante de los datos en formato largo: están listos para hacer joins. A través de un join podemos reemplazar facilmente los códigos de las preguntas (p*_*) por los nombres largos, mucho más significativos para quién nos lea.</p>
+<p>Pasos:</p>
+<ol style="list-style-type: decimal">
+<li>Cambiar el nombre de la columna <code>Pregunta</code> de <code>conteos_p7</code> a <code>nombre</code>, de modo que coincida con la variable con igual información en <code>diccionario</code>.</li>
+<li>Hacer un <code>left_join</code>, de modo que se conserven solamente las filas de la izquierda, es decir, de <code>conteos_p7</code>.</li>
+</ol>
+<pre class="r"><code>conteos_p7 %&gt;% 
+  rename(&quot;nombre&quot; = Pregunta) %&gt;% 
+  kable(caption = &quot;Al cambiar el nombre aquí no necesito especificar claves de unión en el join&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-8">Table 7: </span>Al cambiar el nombre aquí no necesito especificar claves de unión en el join</caption>
+<thead>
+<tr class="header">
+<th align="left">nombre</th>
+<th align="left">Respuesta</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NC</td>
+<td align="right">715096</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">No</td>
+<td align="right">13580012</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NS</td>
+<td align="right">2021106</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+<td align="right">43552653</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+<td align="right">19951882</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NC</td>
+<td align="right">835828</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">No</td>
+<td align="right">11550564</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NS</td>
+<td align="right">2964105</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+<td align="right">42893890</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí, en parte</td>
+<td align="right">21576362</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>conteos_p7 %&gt;% 
+  rename(&quot;nombre&quot; = Pregunta) %&gt;% 
+  left_join(diccionario) %&gt;% 
+  kable(caption = &quot;La columna etiqueta tiene los nombres largos que usaré para graficar&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-8">Table 7: </span>La columna etiqueta tiene los nombres largos que usaré para graficar</caption>
+<thead>
+<tr class="header">
+<th align="left">nombre</th>
+<th align="left">Respuesta</th>
+<th align="right">n</th>
+<th align="left">etiquetas</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NC</td>
+<td align="right">715096</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">No</td>
+<td align="right">13580012</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra religión?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NS</td>
+<td align="right">2021106</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+<td align="right">43552653</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra religión?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+<td align="right">19951882</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NC</td>
+<td align="right">835828</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">No</td>
+<td align="right">11550564</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NS</td>
+<td align="right">2964105</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+<td align="right">42893890</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí, en parte</td>
+<td align="right">21576362</td>
+<td align="left">7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de otra raza (negro, chino,etc.)?</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="preparar-las-etiquetas-largas-para-el-grafico" class="section level2">
+<h2>Preparar las etiquetas largas para el gráfico</h2>
+<p>Los nombres largos de las variables –las preguntas tal como fueron formuladas- son muy informativas. Quizás demasiado. En el gráfico van a superponerse y van a ser difíciles de leer.</p>
+<div id="aproximacion-1-eliminar-el-texto-repetido." class="section level3">
+<h3>Aproximación 1: eliminar el texto repetido.</h3>
+<p>Como la primera parte de la pregunta se repite una aproximación a este problema es eliminarla y mencionarla una vez para todo el gráfico, conservando solamente la parte que cambia.</p>
+<blockquote>
+<p><strong>Advertencia</strong> vamos a usar expresiones regulares. La RegEx no se entienden, se usan.</p>
+</blockquote>
+<p>Pasos:</p>
+<ol style="list-style-type: decimal">
+<li>Usando <code>mutate</code> aplicamos la función <code>str_remove()</code>, que elimina la cadena de caracteres (patrón o pattern en <code>help(str_remove)</code>) de la columna. En este caso vamos a eliminar la cadena “7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de”</li>
+<li>Algunos símbolos (<code>?*.^|&amp;</code> entre otros, están reservados por las expresiones regulares y es necesario “escaparlos”. Un caracter se escapa usando la barra invertida \. Como la barra invertida es a su vez un caracter reservado por R tenemos que escaparlo, así que utilizamos la doble barra invertida \\. Como markdown reserva las barras invertidas para que en este documento salgan 2 tuve que escribir 4. Y así hasta que se torna <a href="https://www.xkcd.com/1638/">peligroso</a></li>
+</ol>
+<pre class="r"><code>conteos_p7 %&gt;% 
+  rename(&quot;nombre&quot; = Pregunta) %&gt;% 
+  left_join(diccionario) %&gt;%         #Hasta acá repito lo que hice en el bloque anterior.
+  mutate(etiquetas = str_remove(etiquetas, &quot;7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas de &quot;)) %&gt;% 
+  kable(caption = &quot;Más legible&quot;)</code></pre>
+<table>
+<caption><span id="tab:unnamed-chunk-9">Table 8: </span>Más legible</caption>
+<thead>
+<tr class="header">
+<th align="left">nombre</th>
+<th align="left">Respuesta</th>
+<th align="right">n</th>
+<th align="left">etiquetas</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NC</td>
+<td align="right">715096</td>
+<td align="left">otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">No</td>
+<td align="right">13580012</td>
+<td align="left">otra religión?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">NS</td>
+<td align="right">2021106</td>
+<td align="left">otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_1</td>
+<td align="left">Sí</td>
+<td align="right">43552653</td>
+<td align="left">otra religión?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_1</td>
+<td align="left">Sí, en parte</td>
+<td align="right">19951882</td>
+<td align="left">otra religión?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NC</td>
+<td align="right">835828</td>
+<td align="left">otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">No</td>
+<td align="right">11550564</td>
+<td align="left">otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">NS</td>
+<td align="right">2964105</td>
+<td align="left">otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="odd">
+<td align="left">p7_2</td>
+<td align="left">Sí</td>
+<td align="right">42893890</td>
+<td align="left">otra raza (negro, chino,etc.)?</td>
+</tr>
+<tr class="even">
+<td align="left">p7_2</td>
+<td align="left">Sí, en parte</td>
+<td align="right">21576362</td>
+<td align="left">otra raza (negro, chino,etc.)?</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="aproximacion-2-agregar-saltos-de-linea." class="section level3">
+<h3>Aproximación 2: agregar saltos de línea.</h3>
+<p>Pasos:</p>
+<ol style="list-style-type: decimal">
+<li>Usando <code>mutate()</code> aplicamos la función <code>str_wrap()</code>, que agrega saltos de líneas cada determinado número caracteres respetando los límites de palabra. De ese modo en lugar de tener una línea muy larga tenemos varias líneas cortas. La expresión literal de una salto de línea en R es <code>\\n</code>, una barra invertida antes de una <code>n</code> minúscula.</li>
+</ol>
+<ul>
+<li>A <code>str_wrap</code> se le puede indicar el ancho aproximado para los saltos de línea: cuanto más pequeño el ancho más frecuentes los saltos de línea.</li>
+</ul>
+<pre class="r"><code>conteos_p7 %&gt;% 
+  rename(&quot;nombre&quot; = Pregunta) %&gt;% 
+  left_join(diccionario) %&gt;%         #Hasta acá repito lo que hice en el bloque anterior.
+  mutate(etiquetas = str_wrap(etiquetas, 20)) </code></pre>
+<pre><code>## # A tibble: 10 x 4
+## # Groups:   nombre, Respuesta [10]
+##    nombre Respuesta           n etiquetas                                 
+##    &lt;chr&gt;  &lt;chr&gt;           &lt;dbl&gt; &lt;chr&gt;                                     
+##  1 p7_1   NC             715096 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  2 p7_1   No           13580012 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  3 p7_1   NS            2021106 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  4 p7_1   Sí           43552653 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  5 p7_1   Sí, en parte 19951882 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  6 p7_2   NC             835828 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  7 p7_2   No           11550564 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  8 p7_2   NS            2964105 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+##  9 p7_2   Sí           42893890 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…
+## 10 p7_2   Sí, en parte 21576362 &quot;7 ¿Estaría dispuesto\no no estaría\ndisp…</code></pre>
+</div>
+</div>
+</div>
+<div id="grafico" class="section level1">
+<h1>Gráfico</h1>
+<p>Ya tenemos todo preparado para hacer el gráfico.</p>
+<ol style="list-style-type: decimal">
+<li>Los conteos agrupados y ponderados.</li>
+<li>Los nombre de etiqueta larga propiamente formateados para que hacerlos legibles.</li>
+</ol>
+<p>Pasos:</p>
+<ol style="list-style-type: decimal">
+<li>Ubicar la etiqueta de cada pregunta en el eje x y los conteos de respuestas en el eje y.</li>
+<li>Utilizar el argumento <code>fill =</code> de <code>ggplot</code> para que cada respuesta tenga un color de relleno<a href="#fn5" class="footnote-ref" id="fnref5"><sup>5</sup></a> igual</li>
+<li>Especificar <code>position = &quot;dodge&quot;</code><a href="#fn6" class="footnote-ref" id="fnref6"><sup>6</sup></a> a <code>geom_bar</code> para barras lado a lado. Por defecto <code>position = &quot;stack&quot;</code> y se generan barras apiladas.</li>
+<li>Ubicar en el subtítulo del gráfico la parte repetida de la pregunta.</li>
+</ol>
+<pre class="r"><code>migracion %&gt;% 
+  select(starts_with(&quot;p7_&quot;), Pondi2) %&gt;%  
+  gather(Pregunta, Respuesta, -Pondi2) %&gt;% 
+  group_by(Pregunta, Respuesta) %&gt;% 
+  count(wt = Pondi2) %&gt;% 
+  rename(&quot;nombre&quot; = Pregunta) %&gt;% 
+  left_join(diccionario) %&gt;%
+  mutate(etiquetas = str_remove(etiquetas, 
+                                &quot;7 ¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas &quot;), 
+         etiquetas = str_wrap(etiquetas, 15)) %&gt;% 
+  ungroup ()%&gt;% 
+  mutate(Respuesta = factor(Respuesta, levels = c(&quot;Sí&quot;, &quot;Sí, en parte&quot;, &quot;No&quot;, &quot;NS&quot;, &quot;NC&quot;))) -&gt; 
+           conteos_p7_etiquetados
+
+conteos_p7_etiquetados %&gt;% 
+  ggplot(aes(x = etiquetas, y = n, fill = Respuesta)) + 
+    geom_col(position = &quot;dodge&quot;) + 
+    labs(title = &quot;Actitudes de tolerancia en México&quot;, 
+       subtitle = &quot;¿Estaría dispuesto o no estaría dispuesto a permitir que en su casa vivieran personas...&quot;,
+       caption = &quot;Elaboración propia\nDatos Encuesta Nacional de Migración&quot;, 
+       x = NULL, 
+       y = NULL) + 
+    scale_y_continuous(labels = scales::comma) + 
+    theme_ipsum_rc() </code></pre>
+<p><img src="/post/2018-10-03-datos-anchos-datos-largos-transformaci%C3%B3n-de-datos-para-gr%C3%A1ficos_files/figure-html/unnamed-chunk-11-1.png" width="960" /></p>
+<p><a href="/images/tolerancia.pdf">Descargar la versión para impresión de este gráfico.</a></p>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Aunque esto no significa que filas y columnas tienen el mismo, en ese caso serían datos cuadrados. Todos los datos cuadrados son rectangulares pero no todos los datos rectangulares son cuadrados.<a href="#fnref1" class="footnote-back">↩</a></p></li>
+<li id="fn2"><p>O ternas, cuartetos, etc.<a href="#fnref2" class="footnote-back">↩</a></p></li>
+<li id="fn3"><p>Para conocer los argumentos por defecto de <code>gather</code> use <code>help(gather)</code>.<a href="#fnref3" class="footnote-back">↩</a></p></li>
+<li id="fn4"><p>Valor, ibid.<a href="#fnref4" class="footnote-back">↩</a></p></li>
+<li id="fn5"><p>El argumento <code>color =</code> controla el color del contorno, no del relleno.<a href="#fnref5" class="footnote-back">↩</a></p></li>
+<li id="fn6"><p>Sí, yo también detesto esa sintaxis con comillas, pero es lo que hay<a href="#fnref6" class="footnote-back">↩</a></p></li>
+</ol>
+</div>
